@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-dark-50 text-dark-700 m-0 font-sans select-none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  input, textarea, select {
+    @apply select-auto;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex justify-center items-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-primary {
+    @apply bg-primary-800 text-white hover:bg-primary-900 focus-visible:ring-primary-800 shadow-sm shadow-primary-900/20;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-dark-800 border border-dark-200 hover:bg-dark-50 focus-visible:ring-dark-500 rounded-xl;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500 shadow-sm shadow-red-500/20;
+  }
+
+  .input-field {
+    @apply block w-full rounded-xl border border-dark-200 py-2.5 px-3.5 text-dark-900 shadow-sm placeholder:text-dark-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 focus:border-transparent sm:text-sm sm:leading-6 transition-all;
+  }
+
+  .label-text {
+    @apply block text-xs font-semibold uppercase tracking-wide text-dark-600 mb-1.5;
+  }
+
+  .card {
+    @apply bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-transparent overflow-hidden;
+  }
+
+  .glass-header {
+    @apply bg-[#f4f7f4] border-b border-transparent;
+  }
+}
+
+@keyframes marqueeScroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-marquee {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marqueeScroll 25s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-dark-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-dark-400;
+}
+
+/* Page Transitios */
+@keyframes slideRightSlow {
+  from { transform: translateX(40px); opacity: 0.2; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideLeftSlow {
+  from { transform: translateX(-40px); opacity: 0.2; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-slide-right-slow {
+  animation: slideRightSlow 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-left-slow {
+  animation: slideLeftSlow 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes float1 {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-30px) rotate(2deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+@keyframes float2 {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(-2deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+@keyframes bgPan {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
+}
+
+/* Custom React Big Calendar Overrides */
+.rbc-calendar { font-family: inherit; border: none; }
+.rbc-toolbar { margin-bottom: 1.5rem; }
+.rbc-toolbar-label { font-size: 1.25rem; font-weight: 800; color: #1f2937; letter-spacing: -0.025em; }
+.rbc-toolbar button { padding: 0.5rem 1rem; border: 1px solid #e5e7eb; color: #374151; background: white; transition: all 0.2s; box-shadow: 0 2px 10px rgba(0,0,0,0.02); font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+.rbc-toolbar button:hover { background-color: #f8faf9; }
+.rbc-toolbar button.rbc-active { background-color: #16a383; color: white; border-color: #16a383; box-shadow: 0 4px 6px -1px rgba(22, 163, 131, 0.2); }
+.rbc-toolbar button:focus { outline: none !important; }
+.rbc-toolbar .rbc-btn-group button:first-child { border-top-left-radius: 0.75rem; border-bottom-left-radius: 0.75rem; }
+.rbc-toolbar .rbc-btn-group button:last-child { border-top-right-radius: 0.75rem; border-bottom-right-radius: 0.75rem; }
+.rbc-month-view, .rbc-time-view, .rbc-agenda-view { border: 1px solid rgba(229, 231, 235, 0.6) !important; border-radius: 1.25rem !important; overflow: hidden !important; background: white !important; box-shadow: 0 10px 40px rgba(0,0,0,0.03) !important; }
+.rbc-header { padding: 0.75rem 0 !important; border-bottom: 1px solid rgba(229, 231, 235, 0.6) !important; font-size: 11px !important; text-transform: uppercase !important; letter-spacing: 0.1em !important; font-weight: 800 !important; color: #6b7280 !important; background: rgba(248, 250, 249, 0.5) !important; }
+.rbc-header + .rbc-header { border-left: 1px solid rgba(229, 231, 235, 0.6) !important; }
+.rbc-day-bg { border-color: transparent !important; }
+.rbc-day-bg + .rbc-day-bg { border-left: 1px solid rgba(229, 231, 235, 0.5) !important; }
+.rbc-month-row + .rbc-month-row { border-top: 1px solid rgba(229, 231, 235, 0.5) !important; }
+.rbc-off-range-bg { background-color: #f8faf9 !important; }
+.rbc-today { background-color: rgba(203, 241, 138, 0.1) !important; }
+.rbc-date-cell { padding: 0.5rem !important; font-size: 13px !important; font-weight: 700 !important; color: #374151 !important; text-align: center !important; }
+.rbc-event { background-color: #16a383 !important; color: white !important; border-radius: 0.5rem !important; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important; border: 1px solid transparent !important; font-weight: 700 !important; letter-spacing: 0.025em !important; padding: 3px 8px !important; }
+.rbc-event:hover { filter: brightness(1.1) !important; }
+.rbc-show-more { color: #16a383 !important; font-size: 12px !important; font-weight: 700 !important; margin-top: 4px !important; background-color: rgba(22, 163, 131, 0.1) !important; padding: 2px 8px !important; border-radius: 0.375rem !important; cursor: pointer !important; display: inline-block !important; }
+.rbc-show-more:hover { background-color: rgba(22, 163, 131, 0.2) !important; }
+.animate-float-1 { animation: float1 12s ease-in-out infinite; }
+.animate-float-2 { animation: float2 14s ease-in-out infinite reverse; }
+.animate-bg-pan { animation: bgPan 40s linear infinite; }

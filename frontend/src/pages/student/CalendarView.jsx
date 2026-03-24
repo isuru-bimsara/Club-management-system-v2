@@ -1,0 +1,56 @@
+import React, { useState, useEffect } from 'react';
+import eventService from '../../services/eventService';
+import EventCalendar from '../../components/events/EventCalendar';
+import Spinner from '../../components/ui/Spinner';
+import toast from 'react-hot-toast';
+
+const CalendarView = () => {
+  const [events, setEvents] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCalendarEvents = async () => {
+      try {
+        const response = await eventService.getEventsForCalendar();
+        
+        // Data is already formatted properly by the backend
+        // We just need to ensure start and end are Date objects
+        const calendarData = response.map(event => {
+          return {
+            ...event,
+            start: new Date(event.start),
+            end: new Date(event.end),
+            allDay: false
+          };
+        });
+        
+        setEvents(calendarData);
+      } catch (error) {
+        toast.error('Failed to load calendar events');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCalendarEvents();
+  }, []);
+
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto h-[calc(100vh-100px)] flex flex-col">
+      <div>
+        <h1 className="text-4xl font-black tracking-tighter text-dark-900">Events Calendar</h1>
+        <p className="mt-2 text-dark-500 font-medium">Plan your schedule and see all upcoming university activities.</p>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+      ) : (
+        <div className="flex-1 w-full bg-white p-6 sm:p-8 rounded-[2rem] shadow-[0_10px_40px_rgb(0,0,0,0.03)] border border-primary-50 overflow-hidden">
+          <EventCalendar events={events} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default CalendarView;
