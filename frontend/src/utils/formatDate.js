@@ -1,3 +1,4 @@
+//frontend/src/utils/formatDate.js
 import { format, parseISO, formatDistanceToNow, isValid } from 'date-fns';
 
 export const formatDate = (dateString, formatStr = 'PPP') => {

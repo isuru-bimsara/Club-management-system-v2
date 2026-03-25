@@ -221,25 +221,7 @@ const AddEditEvent = () => {
             error={errors.venue?.message}
           />
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 mt-4">
-            <Input
-              id="totalTickets"
-              label="Total Tickets Capacity *"
-              type="number"
-              min="1"
-              {...register('totalTickets', { valueAsNumber: true })}
-              error={errors.totalTickets?.message}
-            />
-            <Input
-              id="ticketPrice"
-              label="Ticket Price (LKR) *"
-              type="number"
-              min="0"
-              placeholder="0 for Free Event"
-              {...register('ticketPrice', { valueAsNumber: true })}
-              error={errors.ticketPrice?.message}
-            />
-          </div>
+         
 
           <div className="pt-4">
             <ImageUpload
