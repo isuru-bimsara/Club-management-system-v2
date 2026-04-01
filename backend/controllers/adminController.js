@@ -212,6 +212,17 @@ const unbanUser = async (req, res, next) => {
 // @access  Private/Admin
 const getReports = async (req, res, next) => {
   try {
+    const { startDate, endDate, clubId } = req.query;
+    
+    // Build filter for events
+    const eventFilter = {};
+    if (startDate && endDate) {
+      eventFilter.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    }
+    if (clubId) {
+      eventFilter.club = clubId;
+    }
+
     // Total revenue by club (approved tickets only)
     const revenueByClub = await Ticket.aggregate([
       { $match: { status: 'approved' } },
@@ -271,12 +282,23 @@ const getReports = async (req, res, next) => {
       {
         $project: {
           clubName: 1,
-          memberCount: { $size: { $ifNull: ['$members', []] } }
+          memberCount: { $size: { $ifNull: ['$members', []] } },
+          eventCount: { $literal: 0 } // placeholder
         }
       },
       { $sort: { memberCount: -1 } },
       { $limit: 5 }
     ]);
+
+    // Add eventCount to topClubs
+    for (let club of topClubs) {
+      club.eventCount = await Event.countDocuments({ club: club._id });
+    }
+
+    // Detailed event attendance report
+    const eventAttendance = await Event.find(eventFilter)
+      .populate('club', 'clubName')
+      .sort({ date: -1 });
 
     // Summary stats
     const totalClubs = await Club.countDocuments();
@@ -293,6 +315,7 @@ const getReports = async (req, res, next) => {
       revenueByClub,
       attendanceByMonth,
       topClubs,
+      eventAttendance,
       summary: {
         totalClubs,
         totalStudents,
