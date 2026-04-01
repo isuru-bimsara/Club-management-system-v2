@@ -162,7 +162,8 @@ const Sidebar = ({ isOpen, onClose }) => {
       section: "ADMINISTRATION",
       items: [
         { name: "System Dashboard", to: "/admin", icon: PieChart },
-        { name: "Manage Clubs", to: "/admin/clubs", icon: Building2 },
+        /** `end: false` — stay active on /admin/clubs/add, /edit/:id, etc. */
+        { name: "Manage Clubs", to: "/admin/clubs", icon: Building2, end: false },
         { name: "Manage Users", to: "/admin/users", icon: Users },
         { name: "Merchandise Approvals", to: "/admin/merch", icon: Package },
         { name: "Reports", to: "/admin/reports", icon: PieChart },
@@ -176,7 +177,8 @@ const Sidebar = ({ isOpen, onClose }) => {
       items: [
         { name: "Club Dashboard", to: "/president", icon: PieChart },
         { name: "My Club", to: "/president/club-profile", icon: Building2 },
-        { name: "Manage Events", to: "/president/events", icon: Calendar },
+        /** `end: false` — active on /president/events/add, /edit/:id, etc. */
+        { name: "Manage Events", to: "/president/events", icon: Calendar, end: false },
         { name: "Add Merchandise", to: "/president/merch/add", icon: Package },
         { name: "Merchandise Inbox", to: "/president/merch", icon: Package },
         { name: "Members", to: "/president/members", icon: Users },
@@ -189,7 +191,8 @@ const Sidebar = ({ isOpen, onClose }) => {
       section: "MAIN MENU",
       items: [
         { name: "Home", to: "/", icon: Home },
-        { name: "Clubs", to: "/clubs", icon: Building2 },
+        /** `end: false` — active on /clubs/:id */
+        { name: "Clubs", to: "/clubs", icon: Building2, end: false },
         { name: "Events Calendar", to: "/calendar", icon: Calendar },
       ],
     },
@@ -245,40 +248,31 @@ const Sidebar = ({ isOpen, onClose }) => {
                     <NavLink
                       key={item.name}
                       to={item.to}
+                      end={item.end !== false}
                       onClick={() => {
                         if (window.innerWidth < 1024) onClose();
                       }}
-                      className={({ isActive }) => {
-                        const isMatch =
-                          window.location.pathname === item.to ||
-                          (window.location.pathname.startsWith(`${item.to}/`) &&
-                            item.to !== "/");
-                        return `group flex items-center rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${
-                          isMatch
+                      className={({ isActive }) =>
+                        `group flex items-center rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${
+                          isActive
                             ? "bg-primary-800 text-white shadow-md shadow-primary-900/20 translate-x-1"
                             : "text-dark-500 hover:bg-dark-50 hover:text-dark-900"
-                        }`;
-                      }}
+                        }`
+                      }
                     >
-                      {({ isActive }) => {
-                        const isMatch =
-                          window.location.pathname === item.to ||
-                          (window.location.pathname.startsWith(`${item.to}/`) &&
-                            item.to !== "/");
-                        return (
-                          <>
-                            <item.icon
-                              className={`mr-3 h-5 w-5 shrink-0 transition-colors ${
-                                isMatch
-                                  ? "text-white"
-                                  : "text-dark-400 group-hover:text-dark-600"
-                              }`}
-                              aria-hidden="true"
-                            />
-                            {item.name}
-                          </>
-                        );
-                      }}
+                      {({ isActive }) => (
+                        <>
+                          <item.icon
+                            className={`mr-3 h-5 w-5 shrink-0 transition-colors ${
+                              isActive
+                                ? "text-white"
+                                : "text-dark-400 group-hover:text-dark-600"
+                            }`}
+                            aria-hidden="true"
+                          />
+                          {item.name}
+                        </>
+                      )}
                     </NavLink>
                   ))}
                 </div>

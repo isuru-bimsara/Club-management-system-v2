@@ -1,9 +1,27 @@
+const mongoose = require('mongoose');
 const Event = require('../models/Event');
 const Club = require('../models/Club');
+const User = require('../models/User');
 const Notification = require('../models/Notification');
 const Ticket = require('../models/Ticket');
 
 const baseUrl = process.env.VITE_UPLOADS_URL || 'http://localhost:5000/uploads';
+
+/** Admins, event creator, assigned presidentOf club, or Club document president. */
+async function canManageEvent(user, event) {
+  if (!user || !event) return false;
+  if (user.role === 'admin' || user.role === 'superadmin') return true;
+
+  const uid = user._id != null ? String(user._id) : '';
+  if (event.createdBy != null && String(event.createdBy) === uid) return true;
+
+  if (user.presidentOf && event.club.toString() === user.presidentOf.toString()) return true;
+
+  const club = await Club.findById(event.club).select('president').lean();
+  if (club?.president != null && String(club.president) === uid) return true;
+
+  return false;
+}
 
 // @desc    Create a new event
 // @route   POST /api/events
@@ -11,10 +29,17 @@ const baseUrl = process.env.VITE_UPLOADS_URL || 'http://localhost:5000/uploads';
 const createEvent = async (req, res, next) => {
   try {
     const { title, description, date, time, venue, ticketPrice, totalTickets } = req.body;
-    const clubId = (req.user.role === 'admin' || req.user.role === 'superadmin') ? req.body.clubId : req.user.presidentOf;
+
+    // Use club chosen in the form; fall back to presidentOf for older clients.
+    const clubId = req.body.clubId || req.user.presidentOf;
 
     if (!clubId) {
       return res.status(403).json({ message: 'You must specify a club for this event' });
+    }
+
+    const club = await Club.findById(clubId);
+    if (!club) {
+      return res.status(404).json({ message: 'Club not found' });
     }
 
     let bannerImageUrl = '';
@@ -22,7 +47,7 @@ const createEvent = async (req, res, next) => {
       bannerImageUrl = `${baseUrl}/banners/${req.file.filename}`;
     }
 
-    const event = await Event.create({
+    const created = await Event.create({
       title,
       description,
       date,
@@ -35,9 +60,10 @@ const createEvent = async (req, res, next) => {
       createdBy: req.user._id
     });
 
+    const newEvent = await Event.findById(created._id).populate('club', 'clubName logo');
+
     // Notify club members
-    const club = await Club.findById(clubId);
-    if (club && club.members.length > 0) {
+    if (club.members.length > 0) {
       const notifications = club.members.map(memberId => ({
         recipient: memberId,
         title: `New Event: ${title}`,
@@ -47,7 +73,7 @@ const createEvent = async (req, res, next) => {
       await Notification.insertMany(notifications);
     }
 
-    res.status(201).json(event);
+    res.status(201).json(newEvent);
   } catch (error) {
     next(error);
   }
@@ -59,21 +85,51 @@ const createEvent = async (req, res, next) => {
 const getEvents = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 8;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 8, 100);
     const skip = (page - 1) * limit;
 
-    const query = {};
+    const andParts = [];
 
-    if (req.query.search) {
-      query.$or = [
-        { title: { $regex: req.query.search, $options: 'i' } },
-        { venue: { $regex: req.query.search, $options: 'i' } }
-      ];
+    if (req.query.search && String(req.query.search).trim()) {
+      const s = String(req.query.search).trim();
+      andParts.push({
+        $or: [
+          { title: { $regex: s, $options: 'i' } },
+          { venue: { $regex: s, $options: 'i' } },
+          { description: { $regex: s, $options: 'i' } },
+        ],
+      });
+    }
+
+    if (req.query.forPresident) {
+      const pidRaw = String(req.query.forPresident).trim();
+      if (!mongoose.Types.ObjectId.isValid(pidRaw)) {
+        return res.status(400).json({ message: 'Invalid forPresident id' });
+      }
+      const userObjectId = new mongoose.Types.ObjectId(pidRaw);
+
+      const clubIdsFromRole = await Club.find({ president: userObjectId }).distinct('_id');
+      const userRow = await User.findById(userObjectId).select('presidentOf').lean();
+      const fromProfile = userRow?.presidentOf ? [userRow.presidentOf] : [];
+      const mergedClubIds = [
+        ...new Set([...clubIdsFromRole, ...fromProfile].map((id) => String(id))),
+      ].filter(Boolean);
+
+      const scopeOr = [{ createdBy: userObjectId }];
+      if (mergedClubIds.length) {
+        scopeOr.push({
+          club: { $in: mergedClubIds.map((id) => new mongoose.Types.ObjectId(id)) },
+        });
+      }
+      andParts.push({ $or: scopeOr });
     }
 
     if (req.query.clubId) {
-      query.club = req.query.clubId;
+      andParts.push({ club: req.query.clubId });
     }
+
+    const query =
+      andParts.length === 0 ? {} : andParts.length === 1 ? andParts[0] : { $and: andParts };
 
     const total = await Event.countDocuments(query);
     const events = await Event.find(query)
@@ -163,15 +219,8 @@ const updateEvent = async (req, res, next) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-      const isAuthorized = req.user.presidentOf && event.club.toString() === req.user.presidentOf.toString();
-      if (!isAuthorized) {
-        const Club = require('../models/Club');
-        const club = await Club.findById(event.club);
-        if (!club || club.president.toString() !== req.user._id.toString()) {
-          return res.status(403).json({ message: 'Not authorized to update this event' });
-        }
-      }
+    if (!(await canManageEvent(req.user, event))) {
+      return res.status(403).json({ message: 'Not authorized to update this event' });
     }
 
     const { title, description, date, time, venue, ticketPrice, totalTickets } = req.body;
@@ -206,15 +255,8 @@ const deleteEvent = async (req, res, next) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-      const isAuthorized = req.user.presidentOf && event.club.toString() === req.user.presidentOf.toString();
-      if (!isAuthorized) {
-        const Club = require('../models/Club');
-        const club = await Club.findById(event.club);
-        if (!club || club.president.toString() !== req.user._id.toString()) {
-          return res.status(403).json({ message: 'Not authorized to delete this event' });
-        }
-      }
+    if (!(await canManageEvent(req.user, event))) {
+      return res.status(403).json({ message: 'Not authorized to delete this event' });
     }
 
     // Cascade: Delete tickets related to this event
