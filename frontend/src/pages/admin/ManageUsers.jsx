@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, ShieldCheck, Users } from 'lucide-react';
+import { Search, ShieldAlert, ShieldCheck, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import adminService from '../../services/adminService';
 import Button from '../../components/ui/Button';
@@ -7,23 +7,30 @@ import Spinner from '../../components/ui/Spinner';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
 import { formatDateTime } from '../../utils/formatDate';
+import Input from '../../components/ui/Input';
 
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   const [actionModalOpen, setActionModalOpen] = useState(false);
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [userToAction, setUserToAction] = useState(null);
   const [selectedRole, setSelectedRole] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
-  const fetchUsers = async (currentPage = 1) => {
+  const fetchUsers = async (currentPage = 1, currentSearch = '') => {
     setIsLoading(true);
     try {
-      const response = await adminService.getUsers({ page: currentPage, limit: 10 });
+      const response = await adminService.getUsers({ 
+        page: currentPage, 
+        limit: 10,
+        search: currentSearch 
+      });
       setUsers(response.data);
       setTotalPages(response.totalPages);
       setPage(response.page);
@@ -34,9 +41,18 @@ const ManageUsers = () => {
     }
   };
 
+  // Debounce search term
   useEffect(() => {
-    fetchUsers(page);
-  }, [page]);
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setPage(1); // Reset to first page on search
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    fetchUsers(page, debouncedSearchTerm);
+  }, [page, debouncedSearchTerm]);
 
   const confirmAction = (user) => {
     setUserToAction(user);
@@ -45,10 +61,10 @@ const ManageUsers = () => {
 
   const handleAction = async () => {
     if (!userToAction) return;
-    
+
     setIsProcessing(true);
     const action = userToAction.status === 'active' ? adminService.banUser : adminService.unbanUser;
-    
+
     try {
       await action(userToAction._id);
       toast.success(`User ${userToAction.status === 'active' ? 'banned' : 'unbanned'} successfully`);
@@ -70,7 +86,7 @@ const ManageUsers = () => {
 
   const handleRoleChange = async () => {
     if (!userToAction || !selectedRole) return;
-    
+
     setIsProcessing(true);
     try {
       await adminService.changeUserRole(userToAction._id, selectedRole);
@@ -90,6 +106,18 @@ const ManageUsers = () => {
       <div>
         <h1 className="text-2xl font-bold text-dark-900">Manage Users</h1>
         <p className="mt-1 text-sm text-dark-500">View and manage student accounts</p>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+        <div className="relative w-full sm:w-96">
+          <Input
+            placeholder="Search by name, email, or student ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="!mb-0"
+            icon={<Search className="h-4 w-4 text-dark-400" />}
+          />
+        </div>
       </div>
 
       {isLoading ? (
@@ -157,22 +185,22 @@ const ManageUsers = () => {
               </tbody>
             </table>
           </div>
-          
+
           {totalPages > 1 && (
             <div className="flex justify-between items-center bg-white p-4 border border-dark-200 rounded-xl shadow-sm mt-4">
               <p className="text-sm text-dark-600">
                 Page <span className="font-medium text-dark-900">{page}</span> of <span className="font-medium text-dark-900">{totalPages}</span>
               </p>
               <div className="space-x-2">
-                <Button 
-                  variant="secondary" 
+                <Button
+                  variant="secondary"
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
                 >
                   Previous
                 </Button>
-                <Button 
-                  variant="secondary" 
+                <Button
+                  variant="secondary"
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                 >
@@ -184,23 +212,23 @@ const ManageUsers = () => {
         </>
       )}
 
-      <Modal 
-        isOpen={actionModalOpen} 
+      <Modal
+        isOpen={actionModalOpen}
         onClose={() => setActionModalOpen(false)}
         title={userToAction?.status === 'active' ? "Ban User" : "Unban User"}
       >
         <div className="space-y-4">
           <p className="text-sm text-dark-600">
-            Are you sure you want to {userToAction?.status === 'active' ? 'ban' : 'unban'} <span className="font-bold text-dark-900">{userToAction?.name}</span>? 
+            Are you sure you want to {userToAction?.status === 'active' ? 'ban' : 'unban'} <span className="font-bold text-dark-900">{userToAction?.name}</span>?
             {userToAction?.status === 'active' ? ' They will not be able to log in to the system.' : ' They will regain access to the system.'}
           </p>
           <div className="flex justify-end gap-3 pt-4 border-t border-dark-100">
             <Button variant="secondary" onClick={() => setActionModalOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              variant={userToAction?.status === 'active' ? 'danger' : 'primary'} 
-              onClick={handleAction} 
+            <Button
+              variant={userToAction?.status === 'active' ? 'danger' : 'primary'}
+              onClick={handleAction}
               isLoading={isProcessing}
             >
               Confirm
@@ -209,8 +237,8 @@ const ManageUsers = () => {
         </div>
       </Modal>
 
-      <Modal 
-        isOpen={roleModalOpen} 
+      <Modal
+        isOpen={roleModalOpen}
         onClose={() => setRoleModalOpen(false)}
         title="Change User Role"
       >
@@ -218,7 +246,7 @@ const ManageUsers = () => {
           <p className="text-sm text-dark-600">
             Select a new role for <span className="font-bold text-dark-900">{userToAction?.name}</span>:
           </p>
-          <select 
+          <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
             className="w-full rounded-md border border-dark-300 py-2 px-3 text-sm flex h-10 w-full rounded-md border border-dark-300 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -231,8 +259,8 @@ const ManageUsers = () => {
             <Button variant="secondary" onClick={() => setRoleModalOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleRoleChange} 
+            <Button
+              onClick={handleRoleChange}
               isLoading={isProcessing}
             >
               Update Role
