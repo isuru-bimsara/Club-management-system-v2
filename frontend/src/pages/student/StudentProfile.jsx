@@ -64,8 +64,8 @@ const StudentProfile = () => {
       }
 
       const res = await authService.updateProfile(formData);
-      updateProfile(res.user);
-      setProfilePhoto(res.user.profilePhoto);
+      updateProfile(res);
+      setProfilePhoto(res.profilePhoto || null);
       toast.success('Profile updated successfully');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update profile');
