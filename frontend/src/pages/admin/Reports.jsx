@@ -12,9 +12,16 @@ const Reports = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [clubs, setClubs] = useState([]);
-  
-  // Filters
+
+  // Filters (Applied to the report)
   const [filters, setFilters] = useState({
+    startDate: '',
+    endDate: '',
+    clubId: ''
+  });
+
+  // Pending Filters (In the form, not yet applied)
+  const [pendingFilters, setPendingFilters] = useState({
     startDate: '',
     endDate: '',
     clubId: ''
@@ -29,9 +36,9 @@ const Reports = () => {
     }
   };
 
-  const fetchReports = useCallback(async (isManualRefresh = false) => {
-    if (isManualRefresh) setIsRefreshing(true);
-    else setIsLoading(true);
+  const fetchReports = useCallback(async (isInitial = false) => {
+    if (isInitial) setIsLoading(true);
+    else setIsRefreshing(true);
 
     try {
       const response = await adminService.getReports(filters);
@@ -49,20 +56,22 @@ const Reports = () => {
   }, []);
 
   useEffect(() => {
-    fetchReports();
+    fetchReports(data === null);
   }, [fetchReports]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
+    setPendingFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleApplyFilters = () => {
+    setFilters(pendingFilters);
   };
 
   const handleResetFilters = () => {
-    setFilters({
-      startDate: '',
-      endDate: '',
-      clubId: ''
-    });
+    const defaultFilters = { startDate: '', endDate: '', clubId: '' };
+    setPendingFilters(defaultFilters);
+    setFilters(defaultFilters);
   };
 
   const handleExportCSV = () => {
@@ -79,8 +88,8 @@ const Reports = () => {
       event.ticketsSold * event.ticketPrice
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n" 
+    const csvContent = "data:text/csv;charset=utf-8,"
+      + headers.join(",") + "\n"
       + rows.map(e => e.join(",")).join("\n");
 
     const encodedUri = encodeURI(csvContent);
@@ -92,12 +101,12 @@ const Reports = () => {
     document.body.removeChild(link);
   };
 
-  if (isLoading && !isRefreshing) {
+  if (isLoading) {
     return <div className="flex h-[60vh] items-center justify-center"><Spinner size="lg" /></div>;
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${isRefreshing ? 'opacity-70 pointer-events-none' : ''} transition-opacity`}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -105,7 +114,7 @@ const Reports = () => {
           <p className="mt-1 text-sm text-dark-500">Analyze club activities and event performance</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => fetchReports(true)} variant="outline" size="sm" className="flex items-center gap-2">
+          <Button onClick={() => fetchReports(false)} variant="outline" size="sm" className="flex items-center gap-2">
             <RefreshCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -122,32 +131,32 @@ const Reports = () => {
           <Filter className="h-4 w-4" />
           Report Filters
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
           <div>
             <label className="block text-xs font-semibold text-dark-500 uppercase mb-2">Start Date</label>
-            <input 
-              type="date" 
+            <input
+              type="date"
               name="startDate"
-              value={filters.startDate}
+              value={pendingFilters.startDate}
               onChange={handleFilterChange}
               className="w-full rounded-lg border-dark-200 focus:border-primary-500 focus:ring-primary-500 text-sm"
             />
           </div>
           <div>
             <label className="block text-xs font-semibold text-dark-500 uppercase mb-2">End Date</label>
-            <input 
-              type="date" 
+            <input
+              type="date"
               name="endDate"
-              value={filters.endDate}
+              value={pendingFilters.endDate}
               onChange={handleFilterChange}
               className="w-full rounded-lg border-dark-200 focus:border-primary-500 focus:ring-primary-500 text-sm"
             />
           </div>
-          <div>
+          <div className="md:col-span-1">
             <label className="block text-xs font-semibold text-dark-500 uppercase mb-2">Club Filter</label>
-            <select 
+            <select
               name="clubId"
-              value={filters.clubId}
+              value={pendingFilters.clubId}
               onChange={handleFilterChange}
               className="w-full rounded-lg border-dark-200 focus:border-primary-500 focus:ring-primary-500 text-sm"
             >
@@ -157,14 +166,15 @@ const Reports = () => {
               ))}
             </select>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={handleResetFilters} variant="outline" className="flex-1">Reset</Button>
+          <div className="flex gap-2 md:col-span-2">
+            <Button onClick={handleApplyFilters} variant="primary" className="flex-1">Generate Report</Button>
+            <Button onClick={handleResetFilters} variant="outline" className="px-4">Reset</Button>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Main Attendance Table */}
         <div className="lg:col-span-2 space-y-6">
           <div className="card overflow-hidden">
@@ -204,8 +214,8 @@ const Reports = () => {
                       <td className="px-6 py-4 text-center">
                         <div className="flex flex-col items-center gap-1">
                           <div className="w-24 h-1.5 bg-dark-100 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-primary-500" 
+                            <div
+                              className="h-full bg-primary-500"
                               style={{ width: `${Math.min((event.ticketsSold / event.totalTickets) * 100, 100)}%` }}
                             />
                           </div>
@@ -253,7 +263,7 @@ const Reports = () => {
                     <span className="text-sm font-bold text-primary-600">{formatCurrency(club.totalRevenue)}</span>
                   </div>
                 )) : (
-                   <p className="text-xs text-dark-400 italic">No revenue data available</p>
+                  <p className="text-xs text-dark-400 italic">No revenue data available</p>
                 )}
               </div>
             </div>
@@ -270,8 +280,8 @@ const Reports = () => {
                     <div key={index} className="flex items-center gap-4">
                       <span className="text-xs font-bold text-dark-400 w-16">{months[month._id.month - 1]} {month._id.year}</span>
                       <div className="flex-1 h-3 bg-dark-50 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-indigo-500 opacity-70" 
+                        <div
+                          className="h-full bg-indigo-500 opacity-70"
                           style={{ width: `${Math.min((month.totalAttendance / 100) * 100, 100)}%` }} // Scaling normalization?
                         />
                       </div>
@@ -279,7 +289,7 @@ const Reports = () => {
                     </div>
                   );
                 }) : (
-                   <p className="text-xs text-dark-400 italic">No attendance trend data</p>
+                  <p className="text-xs text-dark-400 italic">No attendance trend data</p>
                 )}
               </div>
             </div>
