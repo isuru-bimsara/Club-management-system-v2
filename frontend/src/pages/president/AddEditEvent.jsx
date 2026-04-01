@@ -20,8 +20,12 @@ const eventSchema = z.object({
   date: z.string().min(1, 'Date is required'),
   time: z.string().min(1, 'Time is required'),
   venue: z.string().min(2, 'Venue is required'),
-  totalTickets: z.number().min(1, 'Must have at least 1 ticket'),
-  ticketPrice: z.number().min(0, 'Price cannot be negative'),
+  totalTickets: z.coerce
+    .number({ invalid_type_error: 'Enter total tickets' })
+    .min(1, 'Must have at least 1 ticket'),
+  ticketPrice: z.coerce
+    .number({ invalid_type_error: 'Enter ticket price' })
+    .min(0, 'Price cannot be negative'),
 });
 
 const AddEditEvent = () => {
@@ -31,6 +35,8 @@ const AddEditEvent = () => {
   
   const [clubs, setClubs] = useState([]);
   const [clubId, setClubId] = useState(null);
+  /** Populated in edit mode for display (club cannot be changed on update). */
+  const [eventClubName, setEventClubName] = useState('');
   const [isLoading, setIsLoading] = useState(isEditMode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bannerFile, setBannerFile] = useState(null);
@@ -53,22 +59,32 @@ const AddEditEvent = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        const queryOptions = (user?.role === 'admin' || user?.role === 'superadmin') ? { limit: 100 } : { presidentId: user?._id };
-        const clubsRes = await clubService.getClubs(queryOptions);
-        
-        if (clubsRes.data) {
-          setClubs(clubsRes.data);
-          let initialClubId = null;
-          const urlParams = new URLSearchParams(window.location.search);
-          const specifiedClubId = urlParams.get('clubId');
-
-          if (specifiedClubId) {
-             initialClubId = specifiedClubId;
-          } else if (clubsRes.data.length > 0) {
-             initialClubId = clubsRes.data[0]._id;
-          }
-          setClubId(initialClubId);
+        // Load every club (paginated API) — same pool as Discover Clubs, not president-filtered.
+        const limit = 100;
+        let page = 1;
+        let totalPages = 1;
+        const allClubs = [];
+        while (page <= totalPages) {
+          const res = await clubService.getClubs({ page, limit });
+          const batch = Array.isArray(res?.data) ? res.data : [];
+          allClubs.push(...batch);
+          totalPages = Math.max(1, parseInt(res?.totalPages, 10) || 1);
+          if (batch.length === 0) break;
+          page += 1;
         }
+        setClubs(allClubs);
+
+        let initialClubId = null;
+        const urlParams = new URLSearchParams(window.location.search);
+        const specifiedClubId = urlParams.get('clubId');
+        if (specifiedClubId) {
+          initialClubId = specifiedClubId;
+        } else if (user?.presidentOf) {
+          initialClubId = String(user.presidentOf);
+        } else if (allClubs.length > 0) {
+          initialClubId = String(allClubs[0]._id);
+        }
+        setClubId(initialClubId);
 
         if (isEditMode) {
           const eventData = await eventService.getEventById(id);
@@ -80,6 +96,13 @@ const AddEditEvent = () => {
           setValue('totalTickets', eventData.totalTickets);
           setValue('ticketPrice', eventData.ticketPrice);
           setBannerFile(eventData.bannerImage || null);
+          const c = eventData.club;
+          if (c && typeof c === 'object' && c.clubName) {
+            setEventClubName(c.clubName);
+            setClubId(c._id != null ? String(c._id) : null);
+          } else if (eventData.club) {
+            setClubId(String(eventData.club));
+          }
         }
       } catch (error) {
         toast.error('Failed to load data');
@@ -139,6 +162,11 @@ const AddEditEvent = () => {
     return <div className="flex h-[60vh] items-center justify-center"><Spinner size="lg" /></div>;
   }
 
+  const selectedClubName =
+    clubId != null && clubId !== ''
+      ? clubs.find((c) => String(c._id) === String(clubId))?.clubName
+      : null;
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
@@ -154,22 +182,52 @@ const AddEditEvent = () => {
         </div>
       </div>
 
-      {(!isEditMode && (user?.role === 'admin' || user?.role === 'superadmin')) && (
+      {isEditMode && eventClubName && (
         <div className="card p-6 sm:p-8 mb-4">
-          <label className="label-text block mb-2">Select Club for Event *</label>
-          <select
-            className="w-full input-field"
-            value={clubId || ''}
-            onChange={(e) => setClubId(e.target.value)}
-          >
-            <option value="" disabled>Select a Club</option>
-            {clubs.map(c => <option key={c._id} value={c._id}>{c.clubName}</option>)}
-          </select>
+          <span className="label-text block mb-2">Club</span>
+          <div className="input-field bg-dark-50 text-dark-700 cursor-not-allowed">
+            {eventClubName}
+          </div>
+          <p className="mt-2 text-xs text-dark-500">Club cannot be changed when editing an event.</p>
         </div>
       )}
 
       <div className="card p-6 sm:p-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {!isEditMode && (
+            <div className="w-full">
+              <label htmlFor="event-club" className="label-text block mb-2">
+                Club * <span className="font-normal text-dark-500">(which club is this event for?)</span>
+              </label>
+              <select
+                id="event-club"
+                className="w-full input-field"
+                value={clubId || ''}
+                onChange={(e) => setClubId(e.target.value || null)}
+                required
+                disabled={clubs.length === 0}
+              >
+                <option value="">Select a club</option>
+                {clubs.map((c) => (
+                  <option key={c._id} value={String(c._id)}>
+                    {c.clubName}
+                  </option>
+                ))}
+              </select>
+              {clubs.length === 0 && (
+                <p className="mt-2 text-sm text-red-600">
+                  No clubs loaded. Check that the API returns clubs and your backend is running.
+                </p>
+              )}
+              {selectedClubName && (
+                <p className="mt-2 text-sm text-dark-600">
+                  Event will be created for:{' '}
+                  <span className="font-semibold text-primary-600">{selectedClubName}</span>
+                </p>
+              )}
+            </div>
+          )}
+
           <Input
             id="title"
             label="Event Title *"
@@ -221,7 +279,26 @@ const AddEditEvent = () => {
             error={errors.venue?.message}
           />
 
-         
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <Input
+              id="totalTickets"
+              label="Total tickets *"
+              type="number"
+              min={1}
+              step={1}
+              {...register('totalTickets', { valueAsNumber: true })}
+              error={errors.totalTickets?.message}
+            />
+            <Input
+              id="ticketPrice"
+              label="Ticket price (LKR) *"
+              type="number"
+              min={0}
+              step={0.01}
+              {...register('ticketPrice', { valueAsNumber: true })}
+              error={errors.ticketPrice?.message}
+            />
+          </div>
 
           <div className="pt-4">
             <ImageUpload
@@ -236,7 +313,7 @@ const AddEditEvent = () => {
             <Button type="button" variant="secondary" onClick={() => navigate('/president/events')}>
               Cancel
             </Button>
-            <Button type="submit" isLoading={isSubmitting}>
+            <Button type="submit" isLoading={isSubmitting} disabled={!isEditMode && (!clubId || clubs.length === 0)}>
               {isEditMode ? 'Save Changes' : 'Create Event'}
             </Button>
           </div>
