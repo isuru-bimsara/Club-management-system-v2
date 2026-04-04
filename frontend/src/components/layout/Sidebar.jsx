@@ -8,7 +8,7 @@ import {
   Ticket, 
   PieChart, 
   Settings,
-  Bell
+  Package
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import { ROLES } from '../../utils/constants';
@@ -18,14 +18,13 @@ const Sidebar = ({ isOpen, onClose }) => {
   const { role } = useAuth();
 
   const adminLinks = [
-<<<<<<< HEAD
     {
       section: "ADMINISTRATION",
       items: [
         { name: "System Dashboard", to: "/admin", icon: PieChart },
-        /** `end: false` — stay active on /admin/clubs/add, /edit/:id, etc. */
         { name: "Manage Clubs", to: "/admin/clubs", icon: Building2, end: false },
         { name: "Manage Users", to: "/admin/users", icon: Users },
+        { name: "Ticket Approvals", to: "/admin/tickets", icon: Ticket },
         { name: "Merchandise Approvals", to: "/admin/merch", icon: Package },
         { name: "Reports", to: "/admin/reports", icon: PieChart },
       ],
@@ -38,8 +37,8 @@ const Sidebar = ({ isOpen, onClose }) => {
       items: [
         { name: "Club Dashboard", to: "/president", icon: PieChart },
         { name: "My Club", to: "/president/club-profile", icon: Building2 },
-        /** `end: false` — active on /president/events/add, /edit/:id, etc. */
         { name: "Manage Events", to: "/president/events", icon: Calendar, end: false },
+        { name: "Ticket Inbox", to: "/president/tickets", icon: Ticket },
         { name: "Add Merchandise", to: "/president/merch/add", icon: Package },
         { name: "Merchandise Inbox", to: "/president/merch", icon: Package },
         { name: "Members", to: "/president/members", icon: Users },
@@ -52,7 +51,6 @@ const Sidebar = ({ isOpen, onClose }) => {
       section: "MAIN MENU",
       items: [
         { name: "Home", to: "/", icon: Home },
-        /** `end: false` — active on /clubs/:id */
         { name: "Clubs", to: "/clubs", icon: Building2, end: false },
         { name: "Events Calendar", to: "/calendar", icon: Calendar },
       ],
@@ -60,41 +58,11 @@ const Sidebar = ({ isOpen, onClose }) => {
     {
       section: "PERSONAL",
       items: [
+        { name: "My Tickets", to: "/my-tickets", icon: Ticket },
         { name: "My Merchandise", to: "/my-merch", icon: Package },
         { name: "Profile", to: "/profile", icon: Settings },
       ],
     },
-=======
-    { section: 'ADMINISTRATION', items: [
-      { name: 'System Dashboard', to: '/admin', icon: PieChart },
-      { name: 'Manage Clubs', to: '/admin/clubs', icon: Building2 },
-      { name: 'Manage Users', to: '/admin/users', icon: Users },
-      { name: 'Ticket Approvals', to: '/admin/tickets', icon: Ticket },
-      { name: 'Reports', to: '/admin/reports', icon: PieChart },
-    ]}
-  ];
-
-  const presidentLinks = [
-    { section: 'CLUB MANAGEMENT', items: [
-      { name: 'Club Dashboard', to: '/president', icon: PieChart },
-      { name: 'My Club', to: '/president/club-profile', icon: Building2 },
-      { name: 'Manage Events', to: '/president/events', icon: Calendar },
-      { name: 'Ticket Inbox', to: '/president/tickets', icon: Ticket },
-      { name: 'Members', to: '/president/members', icon: Users },
-    ]}
-  ];
-
-  const studentLinks = [
-    { section: 'MAIN MENU', items: [
-      { name: 'Home', to: '/', icon: Home },
-      { name: 'Clubs', to: '/clubs', icon: Building2 },
-      { name: 'Events Calendar', to: '/calendar', icon: Calendar },
-    ]},
-    { section: 'PERSONAL', items: [
-      { name: 'My Tickets', to: '/my-tickets', icon: Ticket },
-      { name: 'Profile', to: '/profile', icon: Settings },
-    ]}
->>>>>>> parent of 558a625 (add merchandise utem part)
   ];
 
   let menuGroups = [...studentLinks];
@@ -142,7 +110,6 @@ const Sidebar = ({ isOpen, onClose }) => {
                       onClick={() => {
                         if (window.innerWidth < 1024) onClose();
                       }}
-<<<<<<< HEAD
                       className={({ isActive }) =>
                         `group flex items-center rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${
                           isActive
@@ -164,33 +131,6 @@ const Sidebar = ({ isOpen, onClose }) => {
                           {item.name}
                         </>
                       )}
-=======
-                      className={({ isActive }) => {
-                        const isMatch = window.location.pathname === item.to || (window.location.pathname.startsWith(`${item.to}/`) && item.to !== '/');
-                        return `group flex items-center rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${
-                          isMatch
-                            ? 'bg-primary-800 text-white shadow-md shadow-primary-900/20 translate-x-1'
-                            : 'text-dark-500 hover:bg-dark-50 hover:text-dark-900'
-                        }`;
-                      }}
-                    >
-                      {({ isActive }) => {
-                        const isMatch = window.location.pathname === item.to || (window.location.pathname.startsWith(`${item.to}/`) && item.to !== '/');
-                        return (
-                          <>
-                            <item.icon
-                              className={`mr-3 h-5 w-5 shrink-0 transition-colors ${
-                                isMatch
-                                  ? 'text-white'
-                                  : 'text-dark-400 group-hover:text-dark-600'
-                              }`}
-                              aria-hidden="true"
-                            />
-                            {item.name}
-                          </>
-                        );
-                      }}
->>>>>>> parent of 558a625 (add merchandise utem part)
                     </NavLink>
                   ))}
                 </div>
