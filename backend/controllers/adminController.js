@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Club = require('../models/Club');
 const Event = require('../models/Event');
 const Ticket = require('../models/Ticket');
+const MerchOrder = require('../models/MerchOrder');
 const generateToken = require('../utils/generateToken');
 
 // @desc    Register a new admin
@@ -223,34 +224,43 @@ const getReports = async (req, res, next) => {
       eventFilter.club = clubId;
     }
 
-    // Total revenue by club (approved tickets only)
-    const revenueByClub = await Ticket.aggregate([
-      { $match: { status: 'approved' } },
+    // Total revenue by club (approved merchandise orders only)
+    const revenueByClub = await MerchOrder.aggregate([
+      { $match: { status: "approved" } },
       {
         $lookup: {
-          from: 'events',
-          localField: 'event',
-          foreignField: '_id',
-          as: 'eventDetails'
-        }
+          from: "merchandises",
+          localField: "merchandise",
+          foreignField: "_id",
+          as: "merchDetails",
+        },
       },
-      { $unwind: '$eventDetails' },
+      { $unwind: "$merchDetails" },
       {
         $lookup: {
-          from: 'clubs',
-          localField: 'eventDetails.club',
-          foreignField: '_id',
-          as: 'clubDetails'
-        }
+          from: "events",
+          localField: "merchDetails.event",
+          foreignField: "_id",
+          as: "eventDetails",
+        },
       },
-      { $unwind: '$clubDetails' },
+      { $unwind: "$eventDetails" },
+      {
+        $lookup: {
+          from: "clubs",
+          localField: "eventDetails.club",
+          foreignField: "_id",
+          as: "clubDetails",
+        },
+      },
+      { $unwind: "$clubDetails" },
       {
         $group: {
-          _id: '$clubDetails.clubName',
-          totalRevenue: { $sum: '$totalAmount' }
-        }
+          _id: "$clubDetails.clubName",
+          totalRevenue: { $sum: "$amount" },
+        },
       },
-      { $sort: { totalRevenue: -1 } }
+      { $sort: { totalRevenue: -1 } },
     ]);
 
     // Event attendance by month
@@ -305,11 +315,12 @@ const getReports = async (req, res, next) => {
     const totalStudents = await User.countDocuments({ role: 'student' });
     const totalEvents = await Event.countDocuments();
     
-    const revenueSumResult = await Ticket.aggregate([
-      { $match: { status: 'approved' } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+    const revenueSumResult = await MerchOrder.aggregate([
+      { $match: { status: "approved" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
-    const totalRevenue = revenueSumResult.length > 0 ? revenueSumResult[0].total : 0;
+    const totalRevenue =
+      revenueSumResult.length > 0 ? revenueSumResult[0].total : 0;
 
     res.json({
       revenueByClub,
