@@ -75,26 +75,38 @@ const Reports = () => {
   };
 
   const handleExportCSV = () => {
-    if (!data?.eventAttendance || data.eventAttendance.length === 0) return;
+    const maxCols = 6;
+    const pad = (arr) => {
+      while (arr.length < maxCols) arr.push("");
+      return arr;
+    };
 
-    const headers = ['Event Title', 'Club', 'Date', 'Tickets Sold', 'Total Capacity', 'Ticket Price', 'Total Revenue'];
-    const rows = data.eventAttendance.map(event => [
+    const summaryRows = [
+      pad(["SUMMARY REPORT"]),
+      pad(["Total Clubs", data?.summary?.totalClubs || 0]),
+      pad(["Total Students", data?.summary?.totalStudents || 0]),
+      pad(["Total System Revenue (Merch)", data?.summary?.totalRevenue || 0]),
+      pad([]),
+      pad(["EVENT DETAILS"]),
+      ["Event Title", "Club", "Date", "Tickets Sold", "Tickets Capacity", "Merch Revenue"]
+    ];
+
+    const dataRows = data.eventAttendance.map((event) => [
       `"${event.title.replace(/"/g, '""')}"`,
-      `"${(event.club?.clubName || 'N/A').replace(/"/g, '""')}"`,
-      formatDate(event.date),
+      `"${(event.club?.clubName || "N/A").replace(/"/g, '""')}"`,
+      `"${formatDate(event.date)}"`,
       event.ticketsSold,
       event.totalTickets,
-      event.ticketPrice,
-      event.ticketsSold * event.ticketPrice
+      event.merchRevenue || 0,
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8,"
-      + headers.join(",") + "\n"
-      + rows.map(e => e.join(",")).join("\n");
+    const csvContent = "\ufeff" + summaryRows.map(e => e.join(",")).join("\n") + "\n"
+      + dataRows.map(e => e.join(",")).join("\n");
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute("download", `system_report_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
@@ -227,10 +239,10 @@ const Reports = () => {
                       <td className="px-6 py-4 text-right">
                         <div className="flex flex-col">
                           <span className="font-bold text-primary-600">
-                            {formatCurrency(event.ticketsSold * event.ticketPrice)}
+                            {formatCurrency(event.merchRevenue || 0)}
                           </span>
-                          <span className="text-[10px] text-dark-400">
-                            @{formatCurrency(event.ticketPrice)}
+                          <span className="text-[10px] text-dark-400 uppercase font-black">
+                            Merchandise
                           </span>
                         </div>
                       </td>

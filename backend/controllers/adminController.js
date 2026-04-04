@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Club = require('../models/Club');
 const Event = require('../models/Event');
 const Ticket = require('../models/Ticket');
+const Merchandise = require('../models/Merchandise');
 const MerchOrder = require('../models/MerchOrder');
 const generateToken = require('../utils/generateToken');
 
@@ -306,9 +307,32 @@ const getReports = async (req, res, next) => {
     }
 
     // Detailed event attendance report
-    const eventAttendance = await Event.find(eventFilter)
-      .populate('club', 'clubName')
+    let eventAttendanceRaw = await Event.find(eventFilter)
+      .populate("club", "clubName")
       .sort({ date: -1 });
+
+    const eventAttendance = await Promise.all(
+      eventAttendanceRaw.map(async (event) => {
+        const eventObj = event.toObject();
+        // Find all merchandise for this event
+        const merchIds = await Merchandise.find({ event: event._id }).select(
+          "_id",
+        );
+        // Sum approved orders for these merch items
+        const merchRevenueResult = await MerchOrder.aggregate([
+          {
+            $match: {
+              merchandise: { $in: merchIds.map((m) => m._id) },
+              status: "approved",
+            },
+          },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]);
+        eventObj.merchRevenue =
+          merchRevenueResult.length > 0 ? merchRevenueResult[0].total : 0;
+        return eventObj;
+      }),
+    );
 
     // Summary stats
     const totalClubs = await Club.countDocuments();
