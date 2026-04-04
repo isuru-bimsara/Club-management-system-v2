@@ -21,8 +21,8 @@ const adminService = {
     return response.data;
   },
   
-  getReports: async () => {
-    const response = await api.get('/admin/reports');
+  getReports: async (params = {}) => {
+    const response = await api.get('/admin/reports', { params });
     return response.data;
   }
 };

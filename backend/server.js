@@ -14,7 +14,25 @@ const app = express();
 
 // Security Middlewares
 app.use(helmet({ crossOriginResourcePolicy: false })); // Allow serving images
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+const corsOptions = {
+  credentials: true,
+  origin:
+    process.env.NODE_ENV === 'production'
+      ? process.env.CLIENT_URL
+      : (origin, callback) => {
+          if (
+            !origin ||
+            origin === process.env.CLIENT_URL ||
+            /^http:\/\/localhost:\d+$/.test(origin) ||
+            /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)
+          ) {
+            callback(null, true);
+          } else {
+            callback(null, false);
+          }
+        },
+};
+app.use(cors(corsOptions));
 app.use(mongoSanitize());
 
 // Body parser
