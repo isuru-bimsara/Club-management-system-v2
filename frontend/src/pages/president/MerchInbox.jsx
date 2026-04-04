@@ -160,6 +160,7 @@
 import React, { useEffect, useState } from "react";
 import merchService from "../../services/merchService";
 import Spinner from "../../components/ui/Spinner";
+import Button from "../../components/ui/Button";
 import { formatCurrency } from "../../utils/formatCurrency";
 import { formatDateTime } from "../../utils/formatDate";
 import toast from "react-hot-toast";
@@ -193,7 +194,20 @@ const MerchInbox = () => {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
+
+  const update = async (id, status) => {
+    try {
+      await merchService.updateOrderStatus(id, status);
+      toast.success(`Order ${status.toUpperCase()} successfully`);
+      load();
+    } catch (error) {
+      toast.error("Failed to update status");
+      console.error(error);
+    }
+  };
 
 
   if (loading)
@@ -242,12 +256,30 @@ const MerchInbox = () => {
               </a>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <span
-                className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${statusClasses[o.status] || "bg-dark-100 text-dark-700"}`}
+                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${statusClasses[o.status] || "bg-dark-100 text-dark-700"}`}
               >
                 {o.status}
               </span>
+
+              {role === ROLES.PRESIDENT && o.status === "pending" && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => update(o._id, "rejected")}
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => update(o._id, "approved")}
+                  >
+                    Approve
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         ))}
