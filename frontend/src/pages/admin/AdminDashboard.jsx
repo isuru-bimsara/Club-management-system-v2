@@ -1,4 +1,3 @@
-//frontend/src/pages/admin/AdminDashboard.jsx
 import React, { useEffect, useState } from 'react';
 import { Building2, Users, Calendar, Banknote, Ticket } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

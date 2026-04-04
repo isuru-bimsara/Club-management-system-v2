@@ -279,6 +279,7 @@ const AddEditEvent = () => {
             error={errors.venue?.message}
           />
 
+<<<<<<< HEAD
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <Input
               id="totalTickets"
@@ -286,15 +287,30 @@ const AddEditEvent = () => {
               type="number"
               min={1}
               step={1}
+=======
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 mt-4">
+            <Input
+              id="totalTickets"
+              label="Total Tickets Capacity *"
+              type="number"
+              min="1"
+>>>>>>> parent of 558a625 (add merchandise utem part)
               {...register('totalTickets', { valueAsNumber: true })}
               error={errors.totalTickets?.message}
             />
             <Input
               id="ticketPrice"
+<<<<<<< HEAD
               label="Ticket price (LKR) *"
               type="number"
               min={0}
               step={0.01}
+=======
+              label="Ticket Price (LKR) *"
+              type="number"
+              min="0"
+              placeholder="0 for Free Event"
+>>>>>>> parent of 558a625 (add merchandise utem part)
               {...register('ticketPrice', { valueAsNumber: true })}
               error={errors.ticketPrice?.message}
             />

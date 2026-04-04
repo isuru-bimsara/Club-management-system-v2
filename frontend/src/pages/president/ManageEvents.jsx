@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // import React, { useState, useEffect } from 'react';
 // import { useNavigate } from 'react-router-dom';
 // import { Plus, Calendar as CalendarIcon, Edit2, Trash2 } from 'lucide-react';
@@ -246,17 +247,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Calendar as CalendarIcon, Edit2, Trash2, Package, Search } from 'lucide-react';
+=======
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Calendar as CalendarIcon, Edit2, Trash2 } from 'lucide-react';
+>>>>>>> parent of 558a625 (add merchandise utem part)
 import toast from 'react-hot-toast';
 import eventService from '../../services/eventService';
 import clubService from '../../services/clubService';
-import merchService from '../../services/merchService';
 import useAuth from '../../hooks/useAuth';
 import Button from '../../components/ui/Button';
 import Spinner from '../../components/ui/Spinner';
 import EmptyState from '../../components/ui/EmptyState';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
-import { formatDate } from '../../utils/formatDate';
+import { formatDateTime, formatDate } from '../../utils/formatDate';
+import { formatCurrency } from '../../utils/formatCurrency';
 
 function resolveEventClubName(event, clubsList) {
   const c = event?.club;
@@ -280,18 +286,23 @@ const ManageEvents = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+<<<<<<< HEAD
   const [total, setTotal] = useState(0);
   const [searchInput, setSearchInput] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
 
   const [merchStats, setMerchStats] = useState({}); // eventId => { items, sold, total }
 
+=======
+  
+>>>>>>> parent of 558a625 (add merchandise utem part)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const navigate = useNavigate();
 
+<<<<<<< HEAD
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
 
   useEffect(() => {
@@ -345,6 +356,15 @@ const ManageEvents = () => {
       setTotalPages(response.totalPages ?? 1);
       setTotal(response.total ?? 0);
       await fetchMerchStats(response.data || []);
+=======
+  const fetchEvents = async (cId, currentPage = 1) => {
+    setIsLoading(true);
+    try {
+      const response = await eventService.getEvents({ clubId: cId, page: currentPage, limit: 10 });
+      setEvents(response.data);
+      setTotalPages(response.totalPages);
+      setPage(response.page);
+>>>>>>> parent of 558a625 (add merchandise utem part)
     } catch (error) {
       toast.error('Failed to load events');
       setEvents([]);
@@ -403,6 +423,7 @@ const ManageEvents = () => {
 
   const handleDelete = async () => {
     if (!eventToDelete) return;
+    
     setIsDeleting(true);
     try {
       await eventService.deleteEvent(eventToDelete._id);
@@ -527,12 +548,13 @@ const ManageEvents = () => {
                   <th scope="col" className="px-6 py-4 font-semibold">Event Details</th>
                   <th scope="col" className="px-6 py-4 font-semibold">Club</th>
                   <th scope="col" className="px-6 py-4 font-semibold">Date & Time</th>
-                  <th scope="col" className="px-6 py-4 font-semibold text-center">Merchandise</th>
+                  <th scope="col" className="px-6 py-4 font-semibold text-center">Tickets</th>
                   <th scope="col" className="px-6 py-4 font-semibold text-center">Status</th>
                   <th scope="col" className="px-6 py-4 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-200">
+<<<<<<< HEAD
                 {events.map((event) => {
                   const stats = merchStats[event._id] || { items: 0, sold: 0, total: 0 };
                   const pct = stats.total ? Math.min(100, (stats.sold / stats.total) * 100) : 0;
@@ -603,6 +625,64 @@ const ManageEvents = () => {
                     </tr>
                   );
                 })}
+=======
+                {events.map((event) => (
+                  <tr key={event._id} className="hover:bg-dark-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-dark-100 flex items-center justify-center">
+                          {event.bannerImage ? (
+                            <img className="h-full w-full object-cover" src={event.bannerImage} alt="" />
+                          ) : (
+                            <CalendarIcon className="h-5 w-5 text-dark-400" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-medium text-dark-900 line-clamp-1">{event.title}</div>
+                          <div className="text-xs text-dark-500 flex items-center gap-1 mt-0.5">
+                            <span className="font-semibold text-primary-600">{event.ticketPrice > 0 ? formatCurrency(event.ticketPrice) : 'Free'}</span>
+                            <span>• {event.venue}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-dark-900">{formatDate(event.date)}</div>
+                      <div className="text-xs text-dark-500">{event.time}</div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="text-dark-900 font-medium">{event.ticketsSold} / {event.totalTickets}</div>
+                      <div className="w-full bg-dark-100 rounded-full h-1.5 mt-1 overflow-hidden">
+                        <div 
+                          className="bg-primary-500 h-1.5 rounded-full" 
+                          style={{ width: `${Math.min(100, (event.ticketsSold / event.totalTickets) * 100)}%` }}
+                        ></div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <Badge status={event.status}>{event.status}</Badge>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => navigate(`/president/events/edit/${event._id}`)}
+                          className="rounded-md p-2 text-primary-600 hover:bg-primary-50 transition-colors"
+                          title="Edit Event"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => confirmDelete(event)}
+                          className="rounded-md p-2 text-red-600 hover:bg-red-50 transition-colors"
+                          title="Delete Event"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+>>>>>>> parent of 558a625 (add merchandise utem part)
               </tbody>
             </table>
           </div>
@@ -625,7 +705,7 @@ const ManageEvents = () => {
         <div className="space-y-4">
           <p className="text-sm text-dark-600">
             Are you sure you want to delete <span className="font-bold text-dark-900">{eventToDelete?.title}</span>? 
-            This will remove the event and its related merchandise and data.
+            This will remove the event and all associated tickets.
           </p>
           <div className="flex justify-end gap-3 pt-4 border-t border-dark-100">
             <Button variant="secondary" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>

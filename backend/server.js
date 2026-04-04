@@ -49,7 +49,6 @@ app.use('/api/clubs', require('./routes/clubRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
 app.use('/api/tickets', require('./routes/ticketRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
-app.use('/api/merch', require('./routes/merchRoutes'));
 
 // Root generic route
 app.get('/', (req, res) => {

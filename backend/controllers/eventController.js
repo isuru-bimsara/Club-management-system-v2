@@ -4,8 +4,18 @@ const Club = require('../models/Club');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const Ticket = require('../models/Ticket');
+const sendEmail = require('../utils/sendEmail');
 
 const baseUrl = process.env.VITE_UPLOADS_URL || 'http://localhost:5000/uploads';
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 /** Admins, event creator, assigned presidentOf club, or Club document president. */
 async function canManageEvent(user, event) {
@@ -62,15 +72,80 @@ const createEvent = async (req, res, next) => {
 
     const newEvent = await Event.findById(created._id).populate('club', 'clubName logo');
 
-    // Notify club members
-    if (club.members.length > 0) {
-      const notifications = club.members.map(memberId => ({
-        recipient: memberId,
-        title: `New Event: ${title}`,
-        message: `${club.clubName} has a new event on ${new Date(date).toLocaleDateString()}.`,
-        type: 'event'
-      }));
-      await Notification.insertMany(notifications);
+    // Everyone who joined this club (`User.clubsJoined`) — same source as broadcast
+    const joinedUsers = await User.find({ clubsJoined: clubId }).select('_id email name').lean();
+    const creatorId = String(req.user._id);
+    const recipientUsers = joinedUsers.filter((u) => String(u._id) !== creatorId);
+
+    if (recipientUsers.length > 0) {
+      const dateLabel =
+        date != null && !Number.isNaN(new Date(date).getTime())
+          ? new Date(date).toLocaleDateString(undefined, {
+              weekday: 'short',
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            })
+          : 'TBA';
+      const message = `${club.clubName} posted a new event you can join: "${title}" on ${dateLabel}${
+        venue ? ` at ${venue}` : ''
+      }. Open Events in the app to view details and get tickets.`;
+
+      await Notification.insertMany(
+        recipientUsers.map((u) => ({
+          recipient: u._id,
+          title: `New event: ${title}`,
+          message,
+          type: 'event',
+        }))
+      );
+
+      const mailUser = process.env.GMAIL_USER || process.env.EMAIL_USER;
+      const mailPass = process.env.GMAIL_PASSWORD || process.env.EMAIL_PASS;
+      if (mailUser && mailPass) {
+        const clientBase = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
+        const eventUrl = `${clientBase}/events/${created._id}`;
+        const safeClub = escapeHtml(club.clubName);
+        const safeTitle = escapeHtml(title);
+        const safeVenue = venue ? escapeHtml(venue) : '';
+        const subject = `New event: ${title} — ${club.clubName}`;
+        for (const u of recipientUsers) {
+          if (!u.email || !String(u.email).trim()) continue;
+          const greeting = u.name ? escapeHtml(u.name) : 'there';
+          const textBody = `Hi${u.name ? ` ${u.name}` : ''},
+
+${club.clubName} has posted a new event you can join as a member.
+
+Event: ${title}
+Date: ${dateLabel}${venue ? `\nVenue: ${venue}` : ''}
+
+Open this link to view details and get tickets:
+${eventUrl}
+
+— SLIIT Events`;
+          const htmlBody = `
+<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;line-height:1.5;color:#1a1a1a;">
+  <p>Hi ${greeting},</p>
+  <p><strong>${safeClub}</strong> has a new event you can join.</p>
+  <p><strong>${safeTitle}</strong><br/>
+  ${dateLabel}${safeVenue ? `<br/>Venue: ${safeVenue}` : ''}</p>
+  <p><a href="${escapeHtml(eventUrl)}" style="color:#166534;">View event &amp; tickets</a></p>
+  <p style="font-size:12px;color:#666;">— SLIIT Events</p>
+</body></html>`;
+          try {
+            await sendEmail({
+              email: u.email.trim(),
+              subject,
+              text: textBody,
+              html: htmlBody,
+            });
+          } catch (err) {
+            console.error('[createEvent] Member email failed:', u.email, err.message);
+          }
+        }
+      } else {
+        console.warn('[createEvent] Skipping member emails: set GMAIL_USER & GMAIL_PASSWORD or EMAIL_USER & EMAIL_PASS');
+      }
     }
 
     res.status(201).json(newEvent);
