@@ -41,7 +41,16 @@ const Login = () => {
       toast.success('Logged in successfully');
       navigate('/');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed');
+      const apiMsg = error.response?.data?.message;
+      const network =
+        error.code === 'ERR_NETWORK' || error.message === 'Network Error';
+      toast.error(
+        apiMsg ||
+          (network
+            ? 'Cannot reach the API. Start the backend on port 5000, then refresh.'
+            : error.message) ||
+          'Login failed'
+      );
     } finally {
       setIsLoading(false);
     }

@@ -31,7 +31,6 @@ app.use('/api/clubs', require('./routes/clubRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
 app.use('/api/tickets', require('./routes/ticketRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
-app.use('/api/merch', require('./routes/merchRoutes'));
 
 // Root generic route
 app.get('/', (req, res) => {
@@ -44,4 +43,19 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`));
+const server = app.listen(PORT, () =>
+  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`)
+);
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(
+      `Port ${PORT} is already in use. Close the other terminal running the API, or run:\n` +
+        '  netstat -ano | findstr :' +
+        PORT +
+        '\n  taskkill /PID <pid_from_last_column> /F'
+    );
+    process.exit(1);
+  }
+  throw err;
+});

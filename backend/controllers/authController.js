@@ -7,7 +7,10 @@ const generateToken = require('../utils/generateToken');
 // @access  Public
 const registerUser = async (req, res, next) => {
   try {
-    const { name, email, studentId, password } = req.body;
+    const name = String(req.body.name || '').trim();
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const studentId = String(req.body.studentId || '').trim();
+    const { password } = req.body;
 
     const userExists = await User.findOne({ $or: [{ email }, { studentId }] });
     if (userExists) {
@@ -43,7 +46,8 @@ const registerUser = async (req, res, next) => {
 // @access  Public
 const loginUser = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const { password } = req.body;
 
     // Check if user is an Admin
     const admin = await Admin.findOne({ email }).select('+password');
