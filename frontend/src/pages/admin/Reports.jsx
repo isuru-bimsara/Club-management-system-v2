@@ -75,7 +75,7 @@ const Reports = () => {
   };
 
   const handleExportCSV = () => {
-    const maxCols = 6;
+    const maxCols = 4;
     const pad = (arr) => {
       while (arr.length < maxCols) arr.push("");
       return arr;
@@ -87,16 +87,14 @@ const Reports = () => {
       pad(["Total Students", data?.summary?.totalStudents || 0]),
       pad(["Total System Revenue (Merch)", data?.summary?.totalRevenue || 0]),
       pad([]),
-      pad(["EVENT DETAILS"]),
-      ["Event Title", "Club", "Date", "Tickets Sold", "Tickets Capacity", "Merch Revenue"]
+      ["EVENT DETAILS"],
+      ["Event Title", "Club", "Date", "Merch Revenue"]
     ];
 
     const dataRows = data.eventAttendance.map((event) => [
       `"${event.title.replace(/"/g, '""')}"`,
       `"${(event.club?.clubName || "N/A").replace(/"/g, '""')}"`,
       `"${formatDate(event.date)}"`,
-      event.ticketsSold,
-      event.totalTickets,
       event.merchRevenue || 0,
     ]);
 
@@ -205,7 +203,6 @@ const Reports = () => {
                   <tr>
                     <th className="px-6 py-4 font-bold">Event Details</th>
                     <th className="px-6 py-4 font-bold text-center">Date</th>
-                    <th className="px-6 py-4 font-bold text-center">Tickets</th>
                     <th className="px-6 py-4 font-bold text-right">Revenue</th>
                   </tr>
                 </thead>
@@ -222,19 +219,6 @@ const Reports = () => {
                       </td>
                       <td className="px-6 py-4 text-center text-xs whitespace-nowrap">
                         {formatDate(event.date)}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <div className="w-24 h-1.5 bg-dark-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary-500"
-                              style={{ width: `${Math.min((event.ticketsSold / event.totalTickets) * 100, 100)}%` }}
-                            />
-                          </div>
-                          <span className="text-[10px] font-bold text-dark-500">
-                            {event.ticketsSold} / {event.totalTickets}
-                          </span>
-                        </div>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex flex-col">
