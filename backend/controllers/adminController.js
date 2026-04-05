@@ -215,7 +215,7 @@ const unbanUser = async (req, res, next) => {
 const getReports = async (req, res, next) => {
   try {
     const { startDate, endDate, clubId } = req.query;
-    
+
     // Build filter for events
     const eventFilter = {};
     if (startDate && endDate) {
@@ -225,9 +225,16 @@ const getReports = async (req, res, next) => {
       eventFilter.club = clubId;
     }
 
+    // Build order filter
+    const orderFilter = { status: "approved" };
+    if (startDate && endDate) {
+      // Use date range for order completion/approval
+      orderFilter.updatedAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    }
+
     // Total revenue by club (approved merchandise orders only)
     const revenueByClub = await MerchOrder.aggregate([
-      { $match: { status: "approved" } },
+      { $match: orderFilter },
       {
         $lookup: {
           from: "merchandises",
@@ -247,6 +254,9 @@ const getReports = async (req, res, next) => {
       },
       { $unwind: "$eventDetails" },
       {
+        $match: clubId ? { "eventDetails.club": require('mongoose').Types.ObjectId.createFromHexString(clubId) } : {}
+      },
+      {
         $lookup: {
           from: "clubs",
           localField: "eventDetails.club",
@@ -264,9 +274,12 @@ const getReports = async (req, res, next) => {
       { $sort: { totalRevenue: -1 } },
     ]);
 
-    // Event attendance by month
+    // Attendance aggregation (filtered by date if provided)
+    const attendanceMatch = { status: 'approved' };
+    // We already have attendanceByMonth using eventDetails.date, so we should match on that
+    
     const attendanceByMonth = await Ticket.aggregate([
-      { $match: { status: 'approved' } },
+      { $match: attendanceMatch },
       {
         $lookup: {
           from: 'events',
@@ -276,6 +289,12 @@ const getReports = async (req, res, next) => {
         }
       },
       { $unwind: '$eventDetails' },
+      { 
+        $match: {
+          ...(startDate && endDate ? { "eventDetails.date": { $gte: new Date(startDate), $lte: new Date(endDate) } } : {}),
+          ...(clubId ? { "eventDetails.club": require('mongoose').Types.ObjectId.createFromHexString(clubId) } : {})
+        }
+      },
       {
         $group: {
           _id: {
@@ -288,8 +307,11 @@ const getReports = async (req, res, next) => {
       { $sort: { '_id.year': 1, '_id.month': 1 } }
     ]);
 
-    // Top clubs by membership
+    // Top clubs by membership (static, but we can add filter if needed)
+    // For now, let's keep it as is or filter to the selected club
+    const clubMatch = clubId ? { _id: require('mongoose').Types.ObjectId.createFromHexString(clubId) } : {};
     const topClubs = await Club.aggregate([
+      { $match: clubMatch },
       {
         $project: {
           clubName: 1,
@@ -297,12 +319,15 @@ const getReports = async (req, res, next) => {
         }
       },
       { $sort: { memberCount: -1 } },
-      { $limit: 5 }
+      { $limit: clubId ? 1 : 5 }
     ]);
 
-    // Add eventCount to topClubs
+    // Add eventCount to topClubs (filtered by date)
     for (let club of topClubs) {
-      club.eventCount = await Event.countDocuments({ club: club._id });
+      club.eventCount = await Event.countDocuments({ 
+        club: club._id,
+        ...eventFilter
+      });
     }
 
     // Detailed event attendance report
@@ -323,6 +348,7 @@ const getReports = async (req, res, next) => {
             $match: {
               merchandise: { $in: merchIds.map((m) => m._id) },
               status: "approved",
+              ...(startDate && endDate ? { updatedAt: { $gte: new Date(startDate), $lte: new Date(endDate) } } : {})
             },
           },
           { $group: { _id: null, total: { $sum: "$amount" } } },
@@ -333,13 +359,36 @@ const getReports = async (req, res, next) => {
       }),
     );
 
-    // Summary stats
-    const totalClubs = await Club.countDocuments();
-    const totalStudents = await User.countDocuments({ role: 'student' });
-    const totalEvents = await Event.countDocuments();
+    // Summary stats (Filtered)
+    const totalClubs = clubId ? 1 : await Club.countDocuments();
+    const totalStudents = await User.countDocuments({ role: 'student' }); // Global stat
+    const totalEvents = await Event.countDocuments(eventFilter);
     
+    // Total Revenue (Filtered)
+    // We need to filter this by club and date too
     const revenueSumResult = await MerchOrder.aggregate([
-      { $match: { status: "approved" } },
+      { $match: orderFilter },
+      {
+        $lookup: {
+          from: "merchandises",
+          localField: "merchandise",
+          foreignField: "_id",
+          as: "merch",
+        },
+      },
+      { $unwind: "$merch" },
+      {
+        $lookup: {
+          from: "events",
+          localField: "merch.event",
+          foreignField: "_id",
+          as: "event",
+        },
+      },
+      { $unwind: "$event" },
+      {
+        $match: clubId ? { "event.club": require('mongoose').Types.ObjectId.createFromHexString(clubId) } : {}
+      },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
     const totalRevenue =
@@ -349,6 +398,7 @@ const getReports = async (req, res, next) => {
       revenueByClub,
       attendanceByMonth,
       topClubs,
+      eventAttendance,
       summary: {
         totalClubs,
         totalStudents,

@@ -4,26 +4,63 @@ import adminService from '../../services/adminService';
 import Spinner from '../../components/ui/Spinner';
 import Button from '../../components/ui/Button';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { formatDateTime } from '../../utils/formatDate';
+import { formatDate } from '../../utils/formatDate';
+import clubService from '../../services/clubService';
+import Input from '../../components/ui/Input';
+import { Search, Filter, RefreshCcw } from 'lucide-react';
 
 const Reports = () => {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [clubs, setClubs] = useState([]);
+  
+  // Filter state
+  const [clubId, setClubId] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const fetchReports = async () => {
+    setIsLoading(true);
+    try {
+      const params = {};
+      if (clubId) params.clubId = clubId;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      
+      const response = await adminService.getReports(params);
+      setData(response);
+    } catch (error) {
+      console.error('Failed to fetch reports', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchReports = async () => {
+    const init = async () => {
       try {
-        const response = await adminService.getReports();
-        setData(response);
-      } catch (error) {
-        console.error('Failed to fetch reports', error);
-      } finally {
-        setIsLoading(false);
-    }
+        const clubsRes = await clubService.getClubs({ limit: 100 });
+        if (clubsRes.data) setClubs(clubsRes.data);
+      } catch (err) {
+        console.error('Failed to fetch clubs', err);
+      }
     };
-
+    init();
     fetchReports();
   }, []);
+
+  const handleClearFilters = () => {
+    setClubId('');
+    setStartDate('');
+    setEndDate('');
+    
+    // Fetch all reports (clear filters)
+    setIsLoading(true);
+    adminService.getReports({}).then(res => {
+      setData(res);
+      setIsLoading(false);
+    });
+  };
 
   const handleExportCSV = () => {
     const maxCols = 4;
@@ -73,10 +110,71 @@ const Reports = () => {
           <h1 className="text-2xl font-bold text-dark-900">System Reports</h1>
           <p className="mt-1 text-sm text-dark-500">Comprehensive overview of platform activity</p>
         </div>
-        <Button onClick={handleExportCSV} variant="secondary" className="flex items-center gap-2">
-          <FileDown className="h-4 w-4" />
-          Export Events CSV
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button onClick={handleExportCSV} variant="secondary" className="flex items-center gap-2">
+            <FileDown className="h-4 w-4" />
+            Export Events CSV
+          </Button>
+        </div>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="card p-4 sm:p-6 mb-6">
+        <div className="flex flex-col md:flex-row items-end gap-4">
+          <div className="flex-1 w-full">
+            <label className="label-text block mb-1.5 ml-1">Select Club</label>
+            <select
+              className="w-full input-field"
+              value={clubId}
+              onChange={(e) => setClubId(e.target.value)}
+            >
+              <option value="">All Clubs</option>
+              {clubs.map(c => <option key={c._id} value={c._id}>{c.clubName}</option>)}
+            </select>
+          </div>
+          
+          <div className="w-full md:w-48">
+            <label className="label-text block mb-1.5 ml-1">Start Date</label>
+            <input
+              type="date"
+              className="w-full input-field"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+
+          <div className="w-full md:w-48">
+            <label className="label-text block mb-1.5 ml-1">End Date</label>
+            <input
+              type="date"
+              className="w-full input-field"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+
+          <div className="flex gap-2 w-full md:w-auto">
+            <Button onClick={fetchReports} className="flex-1 md:flex-none flex items-center justify-center gap-2">
+              <Filter className="h-4 w-4" />
+              Generate
+            </Button>
+            <Button 
+              variant="secondary" 
+              onClick={handleClearFilters}
+              className="flex-1 md:flex-none px-3"
+              title="Reset Filters"
+            >
+              <RefreshCcw className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        
+        {(clubId || startDate || endDate) && (
+          <div className="mt-4 flex items-center gap-2 text-xs text-primary-600 font-medium bg-primary-50 w-fit px-3 py-1.5 rounded-full border border-primary-100">
+             <div className="h-1.5 w-1.5 rounded-full bg-primary-500 animate-pulse" />
+             Filtering applied
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -124,7 +222,7 @@ const Reports = () => {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan="4" className="px-4 py-8 text-center text-dark-500">No events data available</td>
+                      <td colSpan="3" className="px-4 py-8 text-center text-dark-500">No events data available</td>
                     </tr>
                   )}
                 </tbody>
