@@ -293,8 +293,7 @@ const getReports = async (req, res, next) => {
       {
         $project: {
           clubName: 1,
-          memberCount: { $size: { $ifNull: ['$members', []] } },
-          eventCount: { $literal: 0 } // placeholder
+          memberCount: { $size: { $ifNull: ['$members', []] } }
         }
       },
       { $sort: { memberCount: -1 } },
@@ -350,7 +349,6 @@ const getReports = async (req, res, next) => {
       revenueByClub,
       attendanceByMonth,
       topClubs,
-      eventAttendance,
       summary: {
         totalClubs,
         totalStudents,

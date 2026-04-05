@@ -115,7 +115,7 @@ const updateProfile = async (req, res, next) => {
       user.studentId = req.body.studentId || user.studentId;
       
       if (req.file) {
-        user.profilePhoto = `${req.protocol}://${req.get('host')}/uploads/logos/${req.file.filename}`;
+        user.profilePhoto = `${process.env.VITE_UPLOADS_URL || 'http://localhost:5000/uploads'}/logos/${req.file.filename}`;
       }
 
       const updatedUser = await user.save();
