@@ -204,6 +204,8 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   let menuGroups = [...studentLinks];
   if (role === ROLES.ADMIN || role === ROLES.SUPERADMIN) {
+    // Filter out PERSONAL section for admins as requested
+    menuGroups = menuGroups.filter(g => g.section !== "PERSONAL");
     menuGroups = [...menuGroups, ...adminLinks];
   } else if (role === ROLES.PRESIDENT) {
     menuGroups = [...menuGroups, ...presidentLinks];
