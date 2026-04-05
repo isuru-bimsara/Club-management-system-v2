@@ -13,8 +13,11 @@ const loginSchema = z.object({
   email: z.string()
     .min(1, 'Email is required')
     .email('Invalid email address')
-    .refine((val) => val.toLowerCase().endsWith('sliit.lk'), {
-      message: 'Email must be a valid SLIIT address (ends with sliit.lk)',
+    .refine((val) => {
+      const email = val.toLowerCase();
+      return email.endsWith('sliit.lk') || email.endsWith('my.sliit.lk');
+    }, {
+      message: 'Email must be a valid SLIIT address (ends with sliit.lk or my.sliit.lk)',
     }),
   password: z.string().min(1, 'Password is required'),
 });
