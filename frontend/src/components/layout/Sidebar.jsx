@@ -202,13 +202,11 @@ const Sidebar = ({ isOpen, onClose }) => {
     },
   ];
 
-  let menuGroups = [];
+  let menuGroups = [...studentLinks];
   if (role === ROLES.ADMIN || role === ROLES.SUPERADMIN) {
-    menuGroups = [studentLinks[0], ...adminLinks];
+    menuGroups = [...menuGroups, ...adminLinks];
   } else if (role === ROLES.PRESIDENT) {
-    menuGroups = [...studentLinks, ...presidentLinks];
-  } else {
-    menuGroups = [...studentLinks];
+    menuGroups = [...menuGroups, ...presidentLinks];
   }
 
   return (
