@@ -26,26 +26,37 @@ const Reports = () => {
   }, []);
 
   const handleExportCSV = () => {
-    // Generate CSV for Events Attendance
-    if (!data?.eventAttendance) return;
+    const maxCols = 4;
+    const pad = (arr) => {
+      while (arr.length < maxCols) arr.push("");
+      return arr;
+    };
 
-    const headers = ['Event Title', 'Club', 'Date', 'Tickets Sold', 'Total Revenue'];
-    const rows = data.eventAttendance.map(event => [
-      `"${event.title}"`,
-      `"${event.club?.clubName || 'N/A'}"`,
-      formatDateTime(event.date, 'yyyy-MM-dd'),
-      event.ticketsSold,
-      event.ticketsSold * event.ticketPrice
+    const summaryRows = [
+      pad(["SUMMARY REPORT"]),
+      pad(["Total Clubs", data?.summary?.totalClubs || 0]),
+      pad(["Total Students", data?.summary?.totalStudents || 0]),
+      pad(["Total System Revenue (Merch)", data?.summary?.totalRevenue || 0]),
+      pad([]),
+      ["EVENT DETAILS"],
+      ["Event Title", "Club", "Date", "Merch Revenue"]
+    ];
+
+    const dataRows = data.eventAttendance.map((event) => [
+      `"${event.title.replace(/"/g, '""')}"`,
+      `"${(event.club?.clubName || "N/A").replace(/"/g, '""')}"`,
+      `"${formatDate(event.date)}"`,
+      event.merchRevenue || 0,
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n" 
-      + rows.map(e => e.join(",")).join("\n");
+    const csvContent = "\ufeff" + summaryRows.map(e => e.join(",")).join("\n") + "\n"
+      + dataRows.map(e => e.join(",")).join("\n");
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `events_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `system_report_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -81,25 +92,34 @@ const Reports = () => {
               <table className="w-full text-left text-sm text-dark-600">
                 <thead className="bg-dark-50 text-dark-900 border-y border-dark-200">
                   <tr>
-                    <th className="px-4 py-3 font-semibold">Event</th>
-                    <th className="px-4 py-3 font-semibold">Club</th>
-                    <th className="px-4 py-3 font-semibold text-center">Tickets Sold</th>
-                    <th className="px-4 py-3 font-semibold text-right">Revenue</th>
+                    <th className="px-6 py-4 font-bold">Event Details</th>
+                    <th className="px-6 py-4 font-bold text-center">Date</th>
+                    <th className="px-6 py-4 font-bold text-right">Revenue</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-dark-200">
                   {data?.eventAttendance?.length > 0 ? data.eventAttendance.map((event) => (
-                    <tr key={event._id} className="hover:bg-dark-50/50">
-                      <td className="px-4 py-3 font-medium text-dark-900">{event.title}</td>
-                      <td className="px-4 py-3 text-xs">{event.club?.clubName}</td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Ticket className="h-3 w-3 text-dark-400" />
-                          <span>{event.ticketsSold} / {event.totalTickets}</span>
+                    <tr key={event._id} className="hover:bg-dark-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-dark-900 leading-tight mb-1">{event.title}</span>
+                          <span className="text-[10px] text-dark-400 font-medium px-2 py-0.5 bg-dark-100 rounded self-start">
+                            {event.club?.clubName || 'Unknown Club'}
+                          </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right font-medium text-primary-600">
-                        {formatCurrency(event.ticketsSold * event.ticketPrice)}
+                      <td className="px-6 py-4 text-center text-xs whitespace-nowrap">
+                        {formatDate(event.date)}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-primary-600">
+                            {formatCurrency(event.merchRevenue || 0)}
+                          </span>
+                          <span className="text-[10px] text-dark-400 uppercase font-black">
+                            Merchandise
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   )) : (

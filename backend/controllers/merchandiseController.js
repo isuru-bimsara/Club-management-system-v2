@@ -121,11 +121,21 @@ const placeOrder = async (req, res) => {
 };
 
 const getOrdersForPresident = async (req, res) => {
-  const merchIds = await Merchandise.find({ createdBy: req.user._id }).select(
-    "_id",
-  );
-  const orders = await MerchOrder.find({ merchandise: { $in: merchIds } })
-    .populate("merchandise")
+  const isAdmin = req.user.role === "admin" || req.user.role === "superadmin";
+  let query = {};
+
+  if (!isAdmin) {
+    const merchIds = await Merchandise.find({ createdBy: req.user._id }).select(
+      "_id",
+    );
+    query = { merchandise: { $in: merchIds } };
+  }
+
+  const orders = await MerchOrder.find(query)
+    .populate({
+      path: "merchandise",
+      populate: { path: "event", select: "name" },
+    })
     .populate("buyer", "name email");
   res.json(orders);
 };
@@ -142,11 +152,15 @@ const updateOrderStatus = async (req, res) => {
     .populate("buyer", "name email");
   if (!order) return res.status(404).json({ message: "Order not found" });
 
-  const isMine = await Merchandise.exists({
-    _id: order.merchandise._id,
-    createdBy: req.user._id,
-  });
-  if (!isMine) return res.status(403).json({ message: "Not authorized" });
+  const isAdmin = req.user.role === "admin" || req.user.role === "superadmin";
+
+  if (!isAdmin) {
+    const isMine = await Merchandise.exists({
+      _id: order.merchandise._id,
+      createdBy: req.user._id,
+    });
+    if (!isMine) return res.status(403).json({ message: "Not authorized" });
+  }
 
   const previousStatus = order.status;
   order.status = status;

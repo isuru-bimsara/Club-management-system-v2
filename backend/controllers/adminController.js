@@ -3,6 +3,8 @@ const User = require('../models/User');
 const Club = require('../models/Club');
 const Event = require('../models/Event');
 const Ticket = require('../models/Ticket');
+const Merchandise = require('../models/Merchandise');
+const MerchOrder = require('../models/MerchOrder');
 const generateToken = require('../utils/generateToken');
 
 // @desc    Register a new admin
@@ -212,34 +214,54 @@ const unbanUser = async (req, res, next) => {
 // @access  Private/Admin
 const getReports = async (req, res, next) => {
   try {
-    // Total revenue by club (approved tickets only)
-    const revenueByClub = await Ticket.aggregate([
-      { $match: { status: 'approved' } },
+    const { startDate, endDate, clubId } = req.query;
+    
+    // Build filter for events
+    const eventFilter = {};
+    if (startDate && endDate) {
+      eventFilter.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    }
+    if (clubId) {
+      eventFilter.club = clubId;
+    }
+
+    // Total revenue by club (approved merchandise orders only)
+    const revenueByClub = await MerchOrder.aggregate([
+      { $match: { status: "approved" } },
       {
         $lookup: {
-          from: 'events',
-          localField: 'event',
-          foreignField: '_id',
-          as: 'eventDetails'
-        }
+          from: "merchandises",
+          localField: "merchandise",
+          foreignField: "_id",
+          as: "merchDetails",
+        },
       },
-      { $unwind: '$eventDetails' },
+      { $unwind: "$merchDetails" },
       {
         $lookup: {
-          from: 'clubs',
-          localField: 'eventDetails.club',
-          foreignField: '_id',
-          as: 'clubDetails'
-        }
+          from: "events",
+          localField: "merchDetails.event",
+          foreignField: "_id",
+          as: "eventDetails",
+        },
       },
-      { $unwind: '$clubDetails' },
+      { $unwind: "$eventDetails" },
+      {
+        $lookup: {
+          from: "clubs",
+          localField: "eventDetails.club",
+          foreignField: "_id",
+          as: "clubDetails",
+        },
+      },
+      { $unwind: "$clubDetails" },
       {
         $group: {
-          _id: '$clubDetails.clubName',
-          totalRevenue: { $sum: '$totalAmount' }
-        }
+          _id: "$clubDetails.clubName",
+          totalRevenue: { $sum: "$amount" },
+        },
       },
-      { $sort: { totalRevenue: -1 } }
+      { $sort: { totalRevenue: -1 } },
     ]);
 
     // Event attendance by month
@@ -278,16 +300,50 @@ const getReports = async (req, res, next) => {
       { $limit: 5 }
     ]);
 
+    // Add eventCount to topClubs
+    for (let club of topClubs) {
+      club.eventCount = await Event.countDocuments({ club: club._id });
+    }
+
+    // Detailed event attendance report
+    let eventAttendanceRaw = await Event.find(eventFilter)
+      .populate("club", "clubName")
+      .sort({ date: -1 });
+
+    const eventAttendance = await Promise.all(
+      eventAttendanceRaw.map(async (event) => {
+        const eventObj = event.toObject();
+        // Find all merchandise for this event
+        const merchIds = await Merchandise.find({ event: event._id }).select(
+          "_id",
+        );
+        // Sum approved orders for these merch items
+        const merchRevenueResult = await MerchOrder.aggregate([
+          {
+            $match: {
+              merchandise: { $in: merchIds.map((m) => m._id) },
+              status: "approved",
+            },
+          },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]);
+        eventObj.merchRevenue =
+          merchRevenueResult.length > 0 ? merchRevenueResult[0].total : 0;
+        return eventObj;
+      }),
+    );
+
     // Summary stats
     const totalClubs = await Club.countDocuments();
     const totalStudents = await User.countDocuments({ role: 'student' });
     const totalEvents = await Event.countDocuments();
     
-    const revenueSumResult = await Ticket.aggregate([
-      { $match: { status: 'approved' } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+    const revenueSumResult = await MerchOrder.aggregate([
+      { $match: { status: "approved" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
-    const totalRevenue = revenueSumResult.length > 0 ? revenueSumResult[0].total : 0;
+    const totalRevenue =
+      revenueSumResult.length > 0 ? revenueSumResult[0].total : 0;
 
     res.json({
       revenueByClub,

@@ -164,6 +164,8 @@ import Button from "../../components/ui/Button";
 import { formatCurrency } from "../../utils/formatCurrency";
 import { formatDateTime } from "../../utils/formatDate";
 import toast from "react-hot-toast";
+import useAuth from "../../hooks/useAuth";
+import { ROLES } from "../../utils/constants";
 
 const statusClasses = {
   pending: "bg-amber-100 text-amber-700",
@@ -174,6 +176,7 @@ const statusClasses = {
 const statusRank = { pending: 0, approved: 1, rejected: 2 };
 
 const MerchInbox = () => {
+  const { role } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -191,13 +194,21 @@ const MerchInbox = () => {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const update = async (id, status) => {
-    await merchService.updateOrderStatus(id, status);
-    toast.success(`Order ${status}`);
-    load();
+    try {
+      await merchService.updateOrderStatus(id, status);
+      toast.success(`Order ${status.toUpperCase()} successfully`);
+      load();
+    } catch (error) {
+      toast.error("Failed to update status");
+      console.error(error);
+    }
   };
+
 
   if (loading)
     return (
@@ -208,7 +219,11 @@ const MerchInbox = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-dark-900">Merchandise Inbox</h1>
+      <h1 className="text-2xl font-bold text-dark-900">
+        {role === ROLES.ADMIN || role === ROLES.SUPERADMIN
+          ? "Merchandise Approvals"
+          : "Merchandise Inbox"}
+      </h1>
       <div className="grid gap-3">
         {orders.map((o) => (
           <div
@@ -216,7 +231,14 @@ const MerchInbox = () => {
             className="card p-4 flex flex-wrap items-center gap-4 justify-between"
           >
             <div>
-              <p className="font-bold text-dark-900">{o.merchandise?.name}</p>
+              {o.merchandise?.event?.name && (
+                <p className="text-xs font-bold text-primary-600 uppercase tracking-wider mb-1">
+                  {o.merchandise.event.name}
+                </p>
+              )}
+              <p className="font-bold text-dark-900 text-lg">
+                {o.merchandise?.name}
+              </p>
               <p className="text-sm text-dark-500">Buyer: {o.buyer?.name}</p>
               <p className="text-sm text-dark-500">
                 Qty: {o.quantity} · {formatCurrency(o.amount)}
@@ -234,27 +256,30 @@ const MerchInbox = () => {
               </a>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <span
-                className={`px-3 py-1 rounded-full text-xs font-semibold ${statusClasses[o.status] || "bg-dark-100 text-dark-700"}`}
+                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${statusClasses[o.status] || "bg-dark-100 text-dark-700"}`}
               >
                 {o.status}
               </span>
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={() => update(o._id, "rejected")}
-                  disabled={o.status !== "pending"}
-                >
-                  Reject
-                </Button>
-                <Button
-                  onClick={() => update(o._id, "approved")}
-                  disabled={o.status !== "pending"}
-                >
-                  Approve
-                </Button>
-              </div>
+
+              {role === ROLES.PRESIDENT && o.status === "pending" && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => update(o._id, "rejected")}
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => update(o._id, "approved")}
+                  >
+                    Approve
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         ))}
