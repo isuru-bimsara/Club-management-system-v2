@@ -17,7 +17,14 @@ import { format } from 'date-fns';
 const eventSchema = z.object({
   title: z.string().min(3, 'Title is required'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
-  date: z.string().min(1, 'Date is required'),
+  date: z.string().min(1, 'Date is required').refine((val) => {
+    const selectedDate = new Date(val);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return selectedDate >= today;
+  }, {
+    message: "Event date cannot be in the past"
+  }),
   time: z.string().min(1, 'Time is required'),
   venue: z.string().min(2, 'Venue is required'),
   totalTickets: z.number().min(1, 'Must have at least 1 ticket'),
@@ -200,6 +207,7 @@ const AddEditEvent = () => {
               id="date"
               label="Date *"
               type="date"
+              min={new Date().toISOString().split('T')[0]}
               {...register('date')}
               error={errors.date?.message}
             />

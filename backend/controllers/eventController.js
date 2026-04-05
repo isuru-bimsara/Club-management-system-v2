@@ -17,6 +17,14 @@ const createEvent = async (req, res, next) => {
       return res.status(403).json({ message: 'You must specify a club for this event' });
     }
 
+    const eventDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (eventDate < today) {
+      return res.status(400).json({ message: 'Event date cannot be in the past' });
+    }
+
     let bannerImageUrl = '';
     if (req.file) {
       bannerImageUrl = `${baseUrl}/banners/${req.file.filename}`;
@@ -178,7 +186,17 @@ const updateEvent = async (req, res, next) => {
 
     if (title) event.title = title;
     if (description) event.description = description;
-    if (date) event.date = date;
+    if (date) {
+      const eventDate = new Date(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Only validate if date is actually changing to a new value
+      if (date !== event.date.toISOString().split('T')[0] && eventDate < today) {
+        return res.status(400).json({ message: 'Event date cannot be in the past' });
+      }
+      event.date = date;
+    }
     if (time) event.time = time;
     if (venue) event.venue = venue;
     if (ticketPrice !== undefined) event.ticketPrice = Number(ticketPrice);
