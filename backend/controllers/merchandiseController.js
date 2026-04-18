@@ -154,10 +154,7 @@ const placeOrder = async (req, res) => {
   const { merchandiseId, quantity, size } = req.body;
   const qty = Number(quantity);
 
-  if (!Number.isFinite(qty) || qty <= 0) {
-    return res.status(400).json({ message: "Invalid quantity" });
-  }
-
+  if (!Number.isFinite(qty) || qty <= 0) return res.status(400).json({ message: "Invalid quantity" });
   if (!req.file) return res.status(400).json({ message: "Receipt required" });
 
   const merch = await Merchandise.findById(merchandiseId).populate("event");
@@ -165,48 +162,35 @@ const placeOrder = async (req, res) => {
 
   let selectedSize = "";
 
-  // Sized flow (safe, no $subtract on array)
   if (merch.hasSizes) {
     selectedSize = String(size || "").trim();
-    if (!selectedSize) {
-      return res.status(400).json({ message: "Size is required for this product" });
-    }
+    if (!selectedSize) return res.status(400).json({ message: "Size is required for this product" });
 
     const idx = (merch.sizes || []).findIndex(
       (s) => s.size.toLowerCase() === selectedSize.toLowerCase()
     );
-    if (idx === -1) {
-      return res.status(400).json({ message: "Selected size is not available" });
-    }
+    if (idx === -1) return res.status(400).json({ message: "Selected size is not available" });
 
     const row = merch.sizes[idx];
     const available = Number(row.quantity || 0) - Number(row.soldQuantity || 0);
-    if (available < qty) {
-      return res.status(400).json({ message: "Not enough stock for selected size" });
-    }
+    if (available < qty) return res.status(400).json({ message: "Not enough stock for selected size" });
 
     merch.sizes[idx].soldQuantity = Number(row.soldQuantity || 0) + qty;
     merch.soldQuantity = Number(merch.soldQuantity || 0) + qty;
     await merch.save();
   } else {
-    // Non-sized flow (existing atomic behavior)
     const updated = await Merchandise.findOneAndUpdate(
       {
         _id: merchandiseId,
         $expr: {
-          $gte: [
-            { $subtract: ["$totalQuantity", { $ifNull: ["$soldQuantity", 0] }] },
-            qty,
-          ],
+          $gte: [{ $subtract: ["$totalQuantity", { $ifNull: ["$soldQuantity", 0] }] }, qty],
         },
       },
       { $inc: { soldQuantity: qty } },
       { new: true }
     );
 
-    if (!updated) {
-      return res.status(400).json({ message: "Not enough stock" });
-    }
+    if (!updated) return res.status(400).json({ message: "Not enough stock" });
   }
 
   const amount = merch.price * qty;
@@ -304,10 +288,22 @@ const updateOrderStatus = async (req, res) => {
     }
 
     try {
+      // USE BEAUTIFUL TEMPLATE HERE
+      const { html, text } = sendMail.buildOrderApprovedTemplate({
+        buyerName: order.buyer?.name,
+        itemName: order.merchandise?.name,
+        quantity: order.quantity,
+        size: order.size,
+        amount: order.amount,
+        pickupVenue: order.pickupVenue,
+        invoiceUrl: order.invoicePdf || "",
+      });
+
       await sendMail({
         email: order.buyer.email,
         subject: "Your merchandise order is approved",
-        html: `<p>Your order has been approved.</p>`,
+        html,
+        text,
       });
     } catch (err) {
       console.error("Email send failed:", err.message);
