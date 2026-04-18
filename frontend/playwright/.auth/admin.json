@@ -1,0 +1,18 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:5173",
+      "localStorage": [
+        {
+          "name": "token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5YmRjYzM0MWYwZWE1ZjgzNmIwNDM4NiIsInJvbGUiOiJzdXBlcmFkbWluIiwiaWF0IjoxNzc2NDk3NTc2LCJleHAiOjE3NzkwODk1NzZ9.1id_SRw-0ENlMdWgfJuA3xYj5e07zTvbjLBWbmQaSqk"
+        },
+        {
+          "name": "user",
+          "value": "{\"_id\":\"69bdcc341f0ea5f836b04386\",\"name\":\"SLIIT Event\",\"email\":\"admin@sliit.lk\",\"role\":\"superadmin\"}"
+        }
+      ]
+    }
+  ]
+}
