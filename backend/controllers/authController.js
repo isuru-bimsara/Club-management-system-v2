@@ -28,6 +28,7 @@ const registerUser = async (req, res, next) => {
         email: user.email,
         studentId: user.studentId,
         role: user.role,
+        clubsJoined: user.clubsJoined,
         token: generateToken(user._id, user.role),
       });
     } else {
@@ -54,6 +55,7 @@ const loginUser = async (req, res, next) => {
           name: admin.name,
           email: admin.email,
           role: admin.role,
+          clubsJoined: [], // Admins might not be members in the same way, but keep it for consistency
         },
         token: generateToken(admin._id, admin.role),
       });
@@ -74,6 +76,7 @@ const loginUser = async (req, res, next) => {
           studentId: user.studentId,
           role: user.role,
           profilePhoto: user.profilePhoto,
+          clubsJoined: user.clubsJoined,
         },
         token: generateToken(user._id, user.role),
       });
@@ -127,6 +130,7 @@ const updateProfile = async (req, res, next) => {
         studentId: updatedUser.studentId,
         role: updatedUser.role,
         profilePhoto: updatedUser.profilePhoto,
+        clubsJoined: updatedUser.clubsJoined,
       });
     } else {
       res.status(404).json({ message: 'User not found' });
