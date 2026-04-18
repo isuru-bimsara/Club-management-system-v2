@@ -1,4 +1,142 @@
-import React, { useEffect, useState } from "react";
+// import React, { useEffect, useState } from "react";
+// import merchService from "../../services/merchService";
+// import Spinner from "../../components/ui/Spinner";
+// import Button from "../../components/ui/Button";
+// import { formatCurrency } from "../../utils/formatCurrency";
+// import { formatDateTime } from "../../utils/formatDate";
+// import toast from "react-hot-toast";
+// import useAuth from "../../hooks/useAuth";
+// import { ROLES } from "../../utils/constants";
+
+// const statusClasses = {
+//   pending: "bg-amber-100 text-amber-700",
+//   approved: "bg-green-100 text-green-700",
+//   rejected: "bg-red-100 text-red-700",
+// };
+
+// const statusRank = { pending: 0, approved: 1, rejected: 2 };
+
+// const MerchInbox = () => {
+//   const { role } = useAuth();
+//   const [orders, setOrders] = useState([]);
+//   const [loading, setLoading] = useState(true);
+
+//   const load = async () => {
+//     setLoading(true);
+//     const data = await merchService.getOrdersForPresident();
+//     data.sort((a, b) => {
+//       const rankA = statusRank[a.status] ?? 3;
+//       const rankB = statusRank[b.status] ?? 3;
+//       if (rankA !== rankB) return rankA - rankB;
+//       return new Date(b.createdAt) - new Date(a.createdAt);
+//     });
+//     setOrders(data);
+//     setLoading(false);
+//   };
+
+//   useEffect(() => {
+//     load();
+//   }, []);
+
+//   const update = async (id, status) => {
+//     try {
+//       await merchService.updateOrderStatus(id, status);
+//       toast.success(`Order ${status.toUpperCase()} successfully`);
+//       load();
+//     } catch (error) {
+//       toast.error("Failed to update status");
+//       console.error(error);
+//     }
+//   };
+
+//   if (loading)
+//     return (
+//       <div className="flex justify-center py-12">
+//         <Spinner size="lg" />
+//       </div>
+//     );
+
+//   return (
+//     <div className="space-y-6">
+//       <h1 className="text-2xl font-bold text-dark-900">
+//         {role === ROLES.ADMIN || role === ROLES.SUPERADMIN
+//           ? "Merchandise Approvals"
+//           : "Merchandise Inbox"}
+//       </h1>
+
+//       <div className="grid gap-3">
+//         {orders.map((o) => (
+//           <div
+//             key={o._id}
+//             className="card p-4 flex flex-wrap items-center gap-4 justify-between"
+//           >
+//             <div>
+//               {o.merchandise?.event?.name && (
+//                 <p className="text-xs font-bold text-primary-600 uppercase tracking-wider mb-1">
+//                   {o.merchandise.event.name}
+//                 </p>
+//               )}
+
+//               <p className="font-bold text-dark-900 text-lg">{o.merchandise?.name}</p>
+//               <p className="text-sm text-dark-500">Buyer: {o.buyer?.name}</p>
+//               {o.size && <p className="text-sm text-dark-500">Size: {o.size}</p>}
+//               <p className="text-sm text-dark-500">
+//                 Qty: {o.quantity} · {formatCurrency(o.amount)}
+//               </p>
+//               <p className="text-xs text-dark-400">
+//                 Submitted {formatDateTime(o.createdAt)}
+//               </p>
+
+//               <a
+//                 className="text-primary-600 text-sm"
+//                 href={o.receiptImage}
+//                 target="_blank"
+//                 rel="noreferrer"
+//               >
+//                 View Receipt
+//               </a>
+//             </div>
+
+//             <div className="flex items-center gap-4">
+//               <span
+//                 className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+//                   statusClasses[o.status] || "bg-dark-100 text-dark-700"
+//                 }`}
+//               >
+//                 {o.status}
+//               </span>
+
+//               {role === ROLES.PRESIDENT && o.status === "pending" && (
+//                 <div className="flex gap-2">
+//                   <Button
+//                     variant="secondary"
+//                     size="sm"
+//                     onClick={() => update(o._id, "rejected")}
+//                   >
+//                     Reject
+//                   </Button>
+//                   <Button size="sm" onClick={() => update(o._id, "approved")}>
+//                     Approve
+//                   </Button>
+//                 </div>
+//               )}
+//             </div>
+//           </div>
+//         ))}
+
+//         {orders.length === 0 && (
+//           <p className="text-sm text-dark-500">No receipts to review.</p>
+//         )}
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default MerchInbox;
+
+
+
+import React, { useEffect, useMemo, useState } from "react";
 import merchService from "../../services/merchService";
 import Spinner from "../../components/ui/Spinner";
 import Button from "../../components/ui/Button";
@@ -7,6 +145,8 @@ import { formatDateTime } from "../../utils/formatDate";
 import toast from "react-hot-toast";
 import useAuth from "../../hooks/useAuth";
 import { ROLES } from "../../utils/constants";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const statusClasses = {
   pending: "bg-amber-100 text-amber-700",
@@ -17,21 +157,27 @@ const statusClasses = {
 const statusRank = { pending: 0, approved: 1, rejected: 2 };
 
 const MerchInbox = () => {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
-    const data = await merchService.getOrdersForPresident();
-    data.sort((a, b) => {
-      const rankA = statusRank[a.status] ?? 3;
-      const rankB = statusRank[b.status] ?? 3;
-      if (rankA !== rankB) return rankA - rankB;
-      return new Date(b.createdAt) - new Date(a.createdAt);
-    });
-    setOrders(data);
-    setLoading(false);
+    try {
+      const data = await merchService.getOrdersForPresident();
+      data.sort((a, b) => {
+        const rankA = statusRank[a.status] ?? 3;
+        const rankB = statusRank[b.status] ?? 3;
+        if (rankA !== rankB) return rankA - rankB;
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+      setOrders(data);
+    } catch (err) {
+      toast.error("Failed to load orders");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -49,20 +195,186 @@ const MerchInbox = () => {
     }
   };
 
-  if (loading)
+  // -------- SUMMARY STATS --------
+  const summary = useMemo(() => {
+    const totalOrders = orders.length;
+    const approvedOrders = orders.filter((o) => o.status === "approved");
+    const pendingOrders = orders.filter((o) => o.status === "pending");
+    const rejectedOrders = orders.filter((o) => o.status === "rejected");
+
+    const totalRevenue = approvedOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
+    const totalQty = approvedOrders.reduce((sum, o) => sum + Number(o.quantity || 0), 0);
+
+    const uniqueUsers = new Set(
+      approvedOrders.map((o) => o.buyer?._id).filter(Boolean)
+    ).size;
+
+    // item-wise
+    const byItemMap = new Map();
+    approvedOrders.forEach((o) => {
+      const key = o.merchandise?._id || o.merchandise?.name || "Unknown";
+      const prev = byItemMap.get(key) || {
+        itemName: o.merchandise?.name || "Unknown",
+        qty: 0,
+        amount: 0,
+        orders: 0,
+      };
+      prev.qty += Number(o.quantity || 0);
+      prev.amount += Number(o.amount || 0);
+      prev.orders += 1;
+      byItemMap.set(key, prev);
+    });
+    const byItem = Array.from(byItemMap.values()).sort((a, b) => b.amount - a.amount);
+
+    // event-wise
+    const byEventMap = new Map();
+    approvedOrders.forEach((o) => {
+      const eventName = o.merchandise?.event?.name || "Unknown Event";
+      const prev = byEventMap.get(eventName) || {
+        eventName,
+        qty: 0,
+        amount: 0,
+        orders: 0,
+      };
+      prev.qty += Number(o.quantity || 0);
+      prev.amount += Number(o.amount || 0);
+      prev.orders += 1;
+      byEventMap.set(eventName, prev);
+    });
+    const byEvent = Array.from(byEventMap.values()).sort((a, b) => b.amount - a.amount);
+
+    return {
+      totalOrders,
+      approvedCount: approvedOrders.length,
+      pendingCount: pendingOrders.length,
+      rejectedCount: rejectedOrders.length,
+      totalRevenue,
+      totalQty,
+      uniqueUsers,
+      byItem,
+      byEvent,
+    };
+  }, [orders]);
+
+  // -------- PDF DOWNLOAD --------
+  const downloadSummaryPdf = () => {
+    try {
+      const doc = new jsPDF();
+
+      const now = new Date();
+      const nowTxt = now.toLocaleString();
+
+      // Header
+      doc.setFontSize(18);
+      doc.setTextColor(22, 101, 52);
+      doc.text("SLIIT Events - Merchandise Summary Report", 14, 18);
+
+      doc.setFontSize(10);
+      doc.setTextColor(80);
+      doc.text(`Generated: ${nowTxt}`, 14, 25);
+      doc.text(`Generated By: ${user?.name || "President/Admin"}`, 14, 30);
+
+      // Summary block
+      autoTable(doc, {
+        startY: 36,
+        head: [["Metric", "Value"]],
+        body: [
+          ["Total Orders", String(summary.totalOrders)],
+          ["Approved Orders", String(summary.approvedCount)],
+          ["Pending Orders", String(summary.pendingCount)],
+          ["Rejected Orders", String(summary.rejectedCount)],
+          ["Unique Buyers (Approved)", String(summary.uniqueUsers)],
+          ["Total Quantity Sold (Approved)", String(summary.totalQty)],
+          ["Total Revenue (Approved)", `LKR ${summary.totalRevenue.toFixed(2)}`],
+        ],
+        styles: { fontSize: 10 },
+        headStyles: { fillColor: [22, 101, 52] },
+      });
+
+      // Item-wise table
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 8,
+        head: [["Item", "Orders", "Qty", "Revenue"]],
+        body:
+          summary.byItem.length > 0
+            ? summary.byItem.map((r) => [
+                r.itemName,
+                String(r.orders),
+                String(r.qty),
+                `LKR ${r.amount.toFixed(2)}`,
+              ])
+            : [["No approved orders", "-", "-", "-"]],
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [3, 105, 161] },
+      });
+
+      // Event-wise table
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 8,
+        head: [["Event", "Orders", "Qty", "Revenue"]],
+        body:
+          summary.byEvent.length > 0
+            ? summary.byEvent.map((r) => [
+                r.eventName,
+                String(r.orders),
+                String(r.qty),
+                `LKR ${r.amount.toFixed(2)}`,
+              ])
+            : [["No approved orders", "-", "-", "-"]],
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [124, 58, 237] },
+      });
+
+      const fileName = `Merch-Summary-${now.toISOString().slice(0, 10)}.pdf`;
+      doc.save(fileName);
+      toast.success("Summary PDF downloaded");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate summary PDF");
+    }
+  };
+
+  if (loading) {
     return (
       <div className="flex justify-center py-12">
         <Spinner size="lg" />
       </div>
     );
+  }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-dark-900">
-        {role === ROLES.ADMIN || role === ROLES.SUPERADMIN
-          ? "Merchandise Approvals"
-          : "Merchandise Inbox"}
-      </h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-dark-900">
+          {role === ROLES.ADMIN || role === ROLES.SUPERADMIN
+            ? "Merchandise Approvals"
+            : "Merchandise Inbox"}
+        </h1>
+
+        <Button onClick={downloadSummaryPdf}>
+          Download Summary PDF
+        </Button>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="card p-4">
+          <p className="text-xs text-dark-500">Total Orders</p>
+          <p className="text-2xl font-bold text-dark-900">{summary.totalOrders}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-dark-500">Approved Revenue</p>
+          <p className="text-2xl font-bold text-green-700">{formatCurrency(summary.totalRevenue)}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-dark-500">Unique Buyers</p>
+          <p className="text-2xl font-bold text-primary-700">{summary.uniqueUsers}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-dark-500">Approved Qty</p>
+          <p className="text-2xl font-bold text-indigo-700">{summary.totalQty}</p>
+        </div>
+      </div>
 
       <div className="grid gap-3">
         {orders.map((o) => (
