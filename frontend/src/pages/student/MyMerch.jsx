@@ -1,4 +1,61 @@
-// // // //frontend/src/pages/student/MyMerch.jsx
+// // // // //frontend/src/pages/student/MyMerch.jsx
+// // // // import React, { useEffect, useState } from 'react';
+// // // // import merchService from '../../services/merchService';
+// // // // import Spinner from '../../components/ui/Spinner';
+// // // // import { formatCurrency } from '../../utils/formatCurrency';
+// // // // import { formatDateTime } from '../../utils/formatDate';
+
+// // // // const statusColors = {
+// // // //   pending: 'bg-yellow-100 text-yellow-700',
+// // // //   approved: 'bg-green-100 text-green-700',
+// // // //   rejected: 'bg-red-100 text-red-700',
+// // // // };
+
+// // // // const MyMerch = () => {
+// // // //   const [orders, setOrders] = useState([]);
+// // // //   const [loading, setLoading] = useState(true);
+
+// // // //   useEffect(() => {
+// // // //     merchService.myOrders().then(setOrders).finally(() => setLoading(false));
+// // // //   }, []);
+
+// // // //   if (loading) return <div className="flex justify-center py-12"><Spinner size="lg" /></div>;
+
+// // // //   return (
+// // // //     <div className="space-y-6">
+// // // //       <h1 className="text-2xl font-bold text-dark-900">My Merchandise</h1>
+// // // //       <div className="grid gap-4">
+// // // //         {orders.map((o) => (
+// // // //           <div key={o._id} className="card p-4 flex items-center justify-between">
+// // // //             <div>
+// // // //               <p className="font-bold text-dark-900">{o.merchandise?.name}</p>
+// // // //               <p className="text-sm text-dark-500">Qty: {o.quantity}</p>
+// // // //               <p className="text-sm text-dark-500">Amount: {formatCurrency(o.amount)}</p>
+// // // //               <p className="text-xs text-dark-400">Submitted {formatDateTime(o.createdAt)}</p>
+// // // //             </div>
+// // // //             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[o.status]}`}>
+// // // //               {o.status}
+// // // //             </span>
+// // // //             {o.status === 'approved' && (
+// // // //               <a
+// // // //                 href={`/api/files${o.receiptImage}`} // optional direct download of approved receipt
+// // // //                 className="text-primary-600 text-sm font-semibold"
+// // // //                 download
+// // // //               >
+// // // //                 Download Receipt
+// // // //               </a>
+// // // //             )}
+// // // //           </div>
+// // // //         ))}
+// // // //         {orders.length === 0 && <p className="text-sm text-dark-500">No purchases yet.</p>}
+// // // //       </div>
+// // // //     </div>
+// // // //   );
+// // // // };
+
+// // // // export default MyMerch;
+
+
 // // // import React, { useEffect, useState } from 'react';
 // // // import merchService from '../../services/merchService';
 // // // import Spinner from '../../components/ui/Spinner';
@@ -16,35 +73,46 @@
 // // //   const [loading, setLoading] = useState(true);
 
 // // //   useEffect(() => {
-// // //     merchService.myOrders().then(setOrders).finally(() => setLoading(false));
+// // //     merchService
+// // //       .myOrders()
+// // //       .then(setOrders)
+// // //       .finally(() => setLoading(false));
 // // //   }, []);
 
-// // //   if (loading) return <div className="flex justify-center py-12"><Spinner size="lg" /></div>;
+// // //   if (loading) {
+// // //     return (
+// // //       <div className="flex justify-center py-12">
+// // //         <Spinner size="lg" />
+// // //       </div>
+// // //     );
+// // //   }
 
 // // //   return (
 // // //     <div className="space-y-6">
 // // //       <h1 className="text-2xl font-bold text-dark-900">My Merchandise</h1>
 // // //       <div className="grid gap-4">
 // // //         {orders.map((o) => (
-// // //           <div key={o._id} className="card p-4 flex items-center justify-between">
+// // //           <div key={o._id} className="card p-4 flex items-center justify-between gap-4">
 // // //             <div>
 // // //               <p className="font-bold text-dark-900">{o.merchandise?.name}</p>
 // // //               <p className="text-sm text-dark-500">Qty: {o.quantity}</p>
 // // //               <p className="text-sm text-dark-500">Amount: {formatCurrency(o.amount)}</p>
 // // //               <p className="text-xs text-dark-400">Submitted {formatDateTime(o.createdAt)}</p>
 // // //             </div>
-// // //             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[o.status]}`}>
-// // //               {o.status}
-// // //             </span>
-// // //             {o.status === 'approved' && (
-// // //               <a
-// // //                 href={`/api/files${o.receiptImage}`} // optional direct download of approved receipt
-// // //                 className="text-primary-600 text-sm font-semibold"
-// // //                 download
-// // //               >
-// // //                 Download Receipt
-// // //               </a>
-// // //             )}
+// // //             <div className="flex items-center gap-3">
+// // //               <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[o.status]}`}>
+// // //                 {o.status}
+// // //               </span>
+// // //               {o.status === 'approved' && o.receiptImage && (
+// // //                 <a
+// // //                   href={o.receiptImage}
+// // //                   className="text-primary-600 text-sm font-semibold"
+// // //                   download
+// // //                 >
+// // //                   Download Receipt
+// // //                 </a>
+// // //               )}
+// // //             </div>
 // // //           </div>
 // // //         ))}
 // // //         {orders.length === 0 && <p className="text-sm text-dark-500">No purchases yet.</p>}
@@ -54,7 +122,6 @@
 // // // };
 
 // // // export default MyMerch;
-
 
 // // import React, { useEffect, useState } from 'react';
 // // import merchService from '../../services/merchService';
@@ -98,18 +165,19 @@
 // //               <p className="text-sm text-dark-500">Qty: {o.quantity}</p>
 // //               <p className="text-sm text-dark-500">Amount: {formatCurrency(o.amount)}</p>
 // //               <p className="text-xs text-dark-400">Submitted {formatDateTime(o.createdAt)}</p>
+// //               <p className="text-xs text-dark-500">Venue: {o.pickupVenue || 'Will be notified'}</p>
 // //             </div>
 // //             <div className="flex items-center gap-3">
 // //               <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[o.status]}`}>
 // //                 {o.status}
 // //               </span>
-// //               {o.status === 'approved' && o.receiptImage && (
+// //               {o.status === 'approved' && o.invoicePdf && (
 // //                 <a
-// //                   href={o.receiptImage}
+// //                   href={o.invoicePdf}
 // //                   className="text-primary-600 text-sm font-semibold"
 // //                   download
 // //                 >
-// //                   Download Receipt
+// //                   Download Payment Confirmation
 // //                 </a>
 // //               )}
 // //             </div>
@@ -121,7 +189,7 @@
 // //   );
 // // };
 
-// // export default MyMerch;
+// // export default MyMerch;\
 
 // import React, { useEffect, useState } from 'react';
 // import merchService from '../../services/merchService';
@@ -146,6 +214,25 @@
 //       .finally(() => setLoading(false));
 //   }, []);
 
+//   // ✅ DOWNLOAD FUNCTION
+//   const handleDownload = async (url, orderId) => {
+//     try {
+//       const response = await fetch(url);
+//       const blob = await response.blob();
+
+//       const link = document.createElement('a');
+//       link.href = window.URL.createObjectURL(blob);
+//       link.download = `Invoice-${orderId}.pdf`;
+
+//       document.body.appendChild(link);
+//       link.click();
+//       link.remove();
+//     } catch (error) {
+//       console.error('Download failed:', error);
+//       alert('Failed to download PDF');
+//     }
+//   };
+
 //   if (loading) {
 //     return (
 //       <div className="flex justify-center py-12">
@@ -167,29 +254,35 @@
 //               <p className="text-xs text-dark-400">Submitted {formatDateTime(o.createdAt)}</p>
 //               <p className="text-xs text-dark-500">Venue: {o.pickupVenue || 'Will be notified'}</p>
 //             </div>
+
 //             <div className="flex items-center gap-3">
 //               <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[o.status]}`}>
 //                 {o.status}
 //               </span>
+
+//               {/* ✅ AUTO DOWNLOAD BUTTON */}
 //               {o.status === 'approved' && o.invoicePdf && (
-//                 <a
-//                   href={o.invoicePdf}
-//                   className="text-primary-600 text-sm font-semibold"
-//                   download
+//                 <button
+//                   onClick={() => handleDownload(o.invoicePdf, o._id)}
+//                   className="text-primary-600 text-sm font-semibold hover:underline"
 //                 >
 //                   Download Payment Confirmation
-//                 </a>
+//                 </button>
 //               )}
 //             </div>
 //           </div>
 //         ))}
-//         {orders.length === 0 && <p className="text-sm text-dark-500">No purchases yet.</p>}
+
+//         {orders.length === 0 && (
+//           <p className="text-sm text-dark-500">No purchases yet.</p>
+//         )}
 //       </div>
 //     </div>
 //   );
 // };
 
-// export default MyMerch;\
+// export default MyMerch;
+
 
 import React, { useEffect, useState } from 'react';
 import merchService from '../../services/merchService';
@@ -214,7 +307,6 @@ const MyMerch = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  // ✅ DOWNLOAD FUNCTION
   const handleDownload = async (url, orderId) => {
     try {
       const response = await fetch(url);
@@ -244,11 +336,13 @@ const MyMerch = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-dark-900">My Merchandise</h1>
+
       <div className="grid gap-4">
         {orders.map((o) => (
           <div key={o._id} className="card p-4 flex items-center justify-between gap-4">
             <div>
               <p className="font-bold text-dark-900">{o.merchandise?.name}</p>
+              {o.size && <p className="text-sm text-dark-500">Size: {o.size}</p>}
               <p className="text-sm text-dark-500">Qty: {o.quantity}</p>
               <p className="text-sm text-dark-500">Amount: {formatCurrency(o.amount)}</p>
               <p className="text-xs text-dark-400">Submitted {formatDateTime(o.createdAt)}</p>
@@ -260,7 +354,6 @@ const MyMerch = () => {
                 {o.status}
               </span>
 
-              {/* ✅ AUTO DOWNLOAD BUTTON */}
               {o.status === 'approved' && o.invoicePdf && (
                 <button
                   onClick={() => handleDownload(o.invoicePdf, o._id)}
