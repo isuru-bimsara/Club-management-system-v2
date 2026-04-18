@@ -19,7 +19,7 @@ const ClubDetails = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
   
-  const isMember = user?.clubs?.includes(id);
+  const isMember = user?.clubsJoined?.some(c => (c._id || c) === id);
 
   useEffect(() => {
     const fetchClubData = async () => {
@@ -55,8 +55,8 @@ const ClubDetails = () => {
         toast.success(`You have left ${club.clubName}`);
         
         // Update local user state
-        const updatedClubs = user.clubs.filter(c => c !== id);
-        updateProfile({ clubs: updatedClubs });
+        const updatedClubs = user.clubsJoined.filter(c => (c._id || c) !== id);
+        updateProfile({ clubsJoined: updatedClubs });
         
         setClub(prev => ({ ...prev, memberCount: prev.memberCount - 1 }));
       } else {
@@ -64,8 +64,8 @@ const ClubDetails = () => {
         toast.success(`You have confidently joined ${club.clubName}!`);
         
         // Update local user state
-        const updatedClubs = [...(user.clubs || []), id];
-        updateProfile({ clubs: updatedClubs });
+        const updatedClubs = [...(user.clubsJoined || []), id];
+        updateProfile({ clubsJoined: updatedClubs });
         
         setClub(prev => ({ ...prev, memberCount: prev.memberCount + 1 }));
       }
