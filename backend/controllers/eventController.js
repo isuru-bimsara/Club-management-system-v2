@@ -10,7 +10,7 @@ const baseUrl = process.env.VITE_UPLOADS_URL || 'http://localhost:5000/uploads';
 // @access  Private/President
 const createEvent = async (req, res, next) => {
   try {
-    const { title, description, date, time, venue, ticketPrice, totalTickets } = req.body;
+    const { title, description, date, time, venue, ticketPrice, totalTickets, reminderMinutes } = req.body;
     const clubId = (req.user.role === 'admin' || req.user.role === 'superadmin') ? req.body.clubId : req.user.presidentOf;
 
     if (!clubId) {
@@ -28,6 +28,7 @@ const createEvent = async (req, res, next) => {
       date,
       time,
       venue,
+      reminderMinutes: Number(reminderMinutes ?? 30),
       bannerImage: bannerImageUrl,
       ticketPrice: Number(ticketPrice),
       totalTickets: Number(totalTickets),
@@ -101,7 +102,7 @@ const getEventsForCalendar = async (req, res, next) => {
   try {
     const events = await Event.find()
       .populate('club', 'clubName logo coverPhoto')
-      .select('title date time venue status');
+      .select('title description date time venue reminderMinutes status');
 
     // Format for FullCalendar or react-big-calendar
     const formattedEvents = events.map(event => {
@@ -118,11 +119,13 @@ const getEventsForCalendar = async (req, res, next) => {
         start,
         end,
         extendedProps: {
+          description: event.description,
           venue: event.venue,
           clubName: event.club?.clubName,
           status: event.status,
           date: event.date,
-          time: event.time
+          time: event.time,
+          reminderMinutes: event.reminderMinutes
         }
       };
     });
@@ -174,13 +177,14 @@ const updateEvent = async (req, res, next) => {
       }
     }
 
-    const { title, description, date, time, venue, ticketPrice, totalTickets } = req.body;
+    const { title, description, date, time, venue, ticketPrice, totalTickets, reminderMinutes } = req.body;
 
     if (title) event.title = title;
     if (description) event.description = description;
     if (date) event.date = date;
     if (time) event.time = time;
     if (venue) event.venue = venue;
+    if (reminderMinutes !== undefined) event.reminderMinutes = Number(reminderMinutes);
     if (ticketPrice !== undefined) event.ticketPrice = Number(ticketPrice);
     if (totalTickets !== undefined) event.totalTickets = Number(totalTickets);
 
