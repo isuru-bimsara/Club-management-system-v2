@@ -22,12 +22,6 @@ const eventSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    reminderMinutes: {
-      type: Number,
-      default: 30,
-      min: 0,
-      max: 40320,
-    },
     bannerImage: {
       type: String,
       default: '',

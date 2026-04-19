@@ -27,9 +27,8 @@ const eventSchema = z.object({
   }),
   time: z.string().min(1, 'Time is required'),
   venue: z.string().min(2, 'Venue is required'),
-  totalTickets: z.coerce.number().min(1, 'Must have at least 1 ticket'),
-  ticketPrice: z.coerce.number().min(0, 'Price cannot be negative'),
-  reminderMinutes: z.coerce.number().int().min(0, 'Reminder cannot be negative').max(40320, 'Reminder must be within 4 weeks'),
+  totalTickets: z.number().min(1, 'Must have at least 1 ticket'),
+  ticketPrice: z.number().min(0, 'Price cannot be negative'),
 });
 
 const AddEditEvent = () => {
@@ -55,7 +54,6 @@ const AddEditEvent = () => {
     defaultValues: {
       totalTickets: 100,
       ticketPrice: 0,
-      reminderMinutes: 30,
     }
   });
 
@@ -88,7 +86,6 @@ const AddEditEvent = () => {
           setValue('venue', eventData.venue);
           setValue('totalTickets', eventData.totalTickets);
           setValue('ticketPrice', eventData.ticketPrice);
-          setValue('reminderMinutes', eventData.reminderMinutes ?? 30);
           setBannerFile(eventData.bannerImage || null);
         }
       } catch (error) {
@@ -117,7 +114,6 @@ const AddEditEvent = () => {
       formData.append('venue', data.venue);
       formData.append('totalTickets', data.totalTickets);
       formData.append('ticketPrice', data.ticketPrice);
-      formData.append('reminderMinutes', data.reminderMinutes);
       
       if (!isEditMode) {
         formData.append('clubId', clubId);
@@ -233,16 +229,7 @@ const AddEditEvent = () => {
             error={errors.venue?.message}
           />
 
-          <Input
-            id="reminderMinutes"
-            label="Google Calendar Reminder (minutes)"
-            type="number"
-            min="0"
-            max="40320"
-            placeholder="30"
-            {...register('reminderMinutes', { valueAsNumber: true })}
-            error={errors.reminderMinutes?.message}
-          />
+         
 
           <div className="pt-4">
             <ImageUpload

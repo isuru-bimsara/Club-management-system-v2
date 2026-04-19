@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, Clock } from 'lucide-react';
 import eventService from '../../services/eventService';
-import { buildGoogleCalendarUrl, formatReminderLabel } from '../../utils/googleCalendar';
 import { 
   format, 
   addMonths, 
@@ -169,27 +168,6 @@ const EventCalendar = () => {
                           <MapPin className="w-3 h-3 mr-1 text-[#5c7cfa]" />
                           {ev.extendedProps?.venue}
                        </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 pt-1">
-                      <span className="text-[10px] font-semibold text-dark-400">
-                        Reminder: {formatReminderLabel(ev.extendedProps?.reminderMinutes ?? 30)}
-                      </span>
-                      <a
-                        href={buildGoogleCalendarUrl({
-                          title: ev.title,
-                          start: ev.start,
-                          end: ev.end,
-                          description: ev.extendedProps?.description,
-                          venue: ev.extendedProps?.venue,
-                          reminderMinutes: ev.extendedProps?.reminderMinutes ?? 30,
-                        })}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[10px] font-bold uppercase tracking-wide text-[#5c7cfa] hover:text-[#4c6ef5]"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Add to Google Calendar
-                      </a>
                     </div>
                  </div>
               ))}
